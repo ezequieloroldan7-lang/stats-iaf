@@ -1128,13 +1128,14 @@ function updateApiStatus(){
 function showApiConfig(){
   var current=getApiUrl();
   var modal=document.createElement('div');
-  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;';
+  modal.id='api-config-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML='<div style="background:#fff;border-radius:12px;padding:28px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);">'
     +'<div style="font-size:15px;font-weight:800;margin-bottom:6px;">Configurar URL de la API</div>'
     +'<div style="font-size:11px;color:#8b93a8;margin-bottom:18px;line-height:1.6;">Pegá la URL del Worker desplegado en Cloudflare.<br>Ejemplo: <code style="background:#f4f5f7;padding:2px 5px;border-radius:4px;">https://iaf-api.miusuario.workers.dev</code></div>'
     +'<input id="api-url-input" type="url" value="'+current+'" placeholder="https://iaf-api.xxxxx.workers.dev" style="width:100%;font-family:inherit;font-size:13px;font-weight:600;border:1px solid #d0d4dc;border-radius:6px;padding:10px 12px;margin-bottom:16px;">'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
-    +'<button onclick="this.closest(\'div[style*=inset]\').remove()" style="font-family:inherit;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d0d4dc;border-radius:6px;padding:8px 14px;cursor:pointer;background:#fff;">Cancelar</button>'
+    +'<button onclick="document.getElementById(\'api-config-modal\').remove()" style="font-family:inherit;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d0d4dc;border-radius:6px;padding:8px 14px;cursor:pointer;background:#fff;">Cancelar</button>'
     +'<button onclick="saveApiConfig()" style="font-family:inherit;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;background:#ba0170;color:#fff;">Guardar</button>'
     +'</div></div>';
   document.body.appendChild(modal);
@@ -1145,7 +1146,8 @@ function saveApiConfig(){
   var input=document.getElementById('api-url-input');
   if(!input)return;
   setApiUrl(input.value);
-  document.querySelector('div[style*="inset:0"]').remove();
+  var modal=document.getElementById('api-config-modal');
+  if(modal)modal.remove();
   updateApiStatus();
   buildDropdown();
   showToast('URL de API guardada','#0d7a4e');
