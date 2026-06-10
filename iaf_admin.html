@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — IAF Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#ba0170;--brand-pale:#f9eef5;
+  --bg:#f4f5f7;--white:#ffffff;
+  --border:#e2e5ea;--border-2:#d0d4dc;
+  --text-1:#1a1d24;--text-2:#4a5068;--text-3:#8b93a8;
+  --good:#0d7a4e;--good-bg:#eaf7f2;
+  --bad:#ca8a04;--bad-bg:#fefce8;
+  --warn:#ba0170;--warn-bg:#fdf0f7;
+  --radius:10px;--radius-sm:6px;
+  --font:'Montserrat','Calibri',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height:100vh;font-size:14px;}
+
+/* HEADER */
+.header{background:var(--white);border-bottom:3px solid var(--brand);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.logo-area{display:flex;align-items:center;gap:16px;}
+.brand-mark{font-size:26px;font-weight:900;color:var(--brand);letter-spacing:-1px;}
+.divider-v{width:1px;height:28px;background:var(--border-2);}
+.inst-name{font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--text-1);text-transform:uppercase;line-height:1.3;}
+.inst-sub{font-size:10px;font-weight:400;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.badge-count{background:var(--brand-pale);color:var(--brand);font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;letter-spacing:.5px;}
+.btn-dashboard{background:var(--brand);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:6px;}
+.btn-dashboard:hover{background:#8f0055;}
+
+/* MONTH BAR */
+.month-mgmt{background:var(--white);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.month-select{font-family:var(--font);font-size:12px;font-weight:600;color:var(--text-1);border:1px solid var(--border-2);border-radius:6px;padding:8px 12px;background:var(--white);cursor:pointer;min-width:200px;}
+.btn{font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;}
+.btn-save{background:var(--brand);color:#fff;}
+.btn-save:hover{background:#8f0055;}
+.btn-new{background:var(--good-bg);color:var(--good);border:1px solid var(--good);}
+.btn-new:hover{background:#d4f0e7;}
+.btn-del{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad);}
+.btn-del:hover{background:#fdf3c0;}
+.btn-export{background:var(--bg);color:var(--text-2);border:1px solid var(--border-2);}
+.btn-export:hover{border-color:var(--brand);color:var(--brand);}
+
+/* SECTION TABS */
+.section-bar{background:var(--bg);border-bottom:1px solid var(--border);padding:0 24px;display:flex;overflow-x:auto;}
+.section-tab{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:10px 14px;cursor:pointer;color:var(--text-3);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;}
+.section-tab:hover{color:var(--text-2);}
+.section-tab.active{color:var(--brand);border-bottom-color:var(--brand);background:var(--white);}
+
+/* MAIN */
+.main{padding:24px;max-width:1100px;}
+
+/* FORM GRID */
+.form-section{display:none;}
+.form-section.active{display:block;}
+.form-title{font-size:16px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px;}
+.form-subtitle{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+.form-subtitle::before{content:'';display:inline-block;width:20px;height:2px;background:var(--brand);}
+
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.card-title{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--brand);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.card-title::before{content:'';display:inline-block;width:14px;height:2px;background:var(--brand);flex-shrink:0;}
+
+.fields-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.fields-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fields-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);}
+.field input,.field select,.field textarea{font-family:var(--font);font-size:13px;font-weight:600;color:var(--text-1);border:1px solid var(--border-2);border-radius:var(--radius-sm);padding:8px 10px;background:var(--white);transition:border .15s;width:100%;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(186,1,112,.1);}
+.field input.error,.field textarea.error{border-color:var(--bad);}
+.field textarea{font-family:'Courier New',monospace;font-size:12px;font-weight:400;resize:vertical;min-height:120px;}
+.field .hint{font-size:9px;color:var(--text-3);font-weight:500;line-height:1.4;margin-top:2px;}
+
+/* QUIROFANOS ROW */
+.q-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.q-row .field label{text-align:center;}
+.q-row .field input{text-align:center;}
+
+/* DIAS SEMANA TABLE */
+.dias-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+.dias-table th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);padding:8px 6px;text-align:center;border-bottom:2px solid var(--border);}
+.dias-table td{padding:5px 4px;border-bottom:1px solid var(--border);}
+.dias-table td:first-child{font-size:11px;font-weight:600;color:var(--text-2);padding-left:0;white-space:nowrap;}
+.dias-table input{font-family:var(--font);font-size:12px;font-weight:600;color:var(--text-1);border:1px solid var(--border);border-radius:4px;padding:5px 4px;width:100%;text-align:center;background:var(--white);}
+.dias-table input:focus{outline:none;border-color:var(--brand);}
+
+/* TEXTAREA FORMAT HINT BOX */
+.format-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:10px;font-family:'Courier New',monospace;font-size:10px;color:var(--text-3);line-height:1.8;}
+.format-box strong{color:var(--text-2);}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1d24;color:#fff;font-size:12px;font-weight:700;padding:12px 20px;border-radius:8px;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;display:flex;align-items:center;gap:8px;}
+.toast.show{opacity:1;}
+.toast .toast-icon{font-size:16px;}
+
+/* OPP FIELDS */
+.opp-pair{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;}
+.opp-pair .field:last-child input{font-size:11px;}
+
+/* IMPORT hidden input */
+#import-file{display:none;}
+
+@media(max-width:700px){
+  .month-mgmt{padding:10px 12px;}
+  .main{padding:16px 12px;}
+  .fields-grid{grid-template-columns:1fr 1fr;}
+  .fields-grid-2,.fields-grid-3{grid-template-columns:1fr;}
+  .q-row{grid-template-columns:repeat(3,1fr);}
+  .header{padding:0 12px;}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo-area">
+    <div class="brand-mark">M·C·A</div>
+    <div class="divider-v"></div>
+    <div>
+      <div class="inst-name">Instituto Alexander Fleming</div>
+      <div class="inst-sub">Admin — Carga de datos</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge-count" id="month-count">0 meses</span>
+    <a href="iaf_analytics.html" class="btn-dashboard">📊 Ver Dashboard</a>
+  </div>
+</header>
+
+<div class="month-mgmt">
+  <select class="month-select" id="monthSelect" onchange="loadMonth(this.value)">
+    <option value="">— Seleccionar mes —</option>
+  </select>
+  <button class="btn btn-new" onclick="newMonth()">+ Nuevo mes</button>
+  <button class="btn btn-save" onclick="saveCurrent()">💾 Guardar</button>
+  <button class="btn btn-del" onclick="deleteMonth()">🗑 Eliminar</button>
+  <button class="btn btn-export" onclick="exportJSON()">⬇ Exportar JSON</button>
+  <button class="btn btn-export" onclick="document.getElementById('import-file').click()">📤 Importar JSON</button>
+  <input type="file" id="import-file" accept=".json" onchange="importJSON(event)">
+</div>
+
+<div class="section-bar">
+  <div class="section-tab active" onclick="switchSection('kpis',this)">Info & KPIs</div>
+  <div class="section-tab" onclick="switchSection('utilizacion',this)">Utilización</div>
+  <div class="section-tab" onclick="switchSection('volumen',this)">Volumen</div>
+  <div class="section-tab" onclick="switchSection('bloques',this)">Bloques</div>
+  <div class="section-tab" onclick="switchSection('atrasos',this)">Atrasos</div>
+  <div class="section-tab" onclick="switchSection('agendamiento',this)">Agendamiento</div>
+  <div class="section-tab" onclick="switchSection('cancelaciones',this)">Cancelaciones</div>
+  <div class="section-tab" onclick="switchSection('estimaciones',this)">Estimaciones</div>
+  <div class="section-tab" onclick="switchSection('oportunidades',this)">Oportunidades</div>
+</div>
+
+<div class="main">
+
+<!-- ══════════ SECTION: INFO & KPIs ══════════ -->
+<div id="sec-kpis" class="form-section active">
+  <div class="form-title">Información del mes & KPIs principales</div>
+  <div class="form-subtitle">Datos generales y métricas clave</div>
+
+  <div class="card">
+    <div class="card-title">Identificación del mes</div>
+    <div class="fields-grid-3">
+      <div class="field">
+        <label>Mes completo (label)</label>
+        <input type="text" id="f-label" placeholder="Ej: Abril 2026">
+        <span class="hint">Nombre completo tal como aparece en el dashboard</span>
+      </div>
+      <div class="field">
+        <label>Período (period)</label>
+        <input type="text" id="f-period" placeholder="01/04 — 30/04/2026">
+      </div>
+      <div class="field">
+        <label>Performance</label>
+        <select id="f-perf">
+          <option value="BAJA">BAJA</option>
+          <option value="MEDIA">MEDIA</option>
+          <option value="ALTA">ALTA</option>
+        </select>
+      </div>
+    </div>
+    <div class="fields-grid-3" style="margin-top:12px;">
+      <div class="field">
+        <label>Scoring Wúru (1-3)</label>
+        <input type="number" id="f-scoring" placeholder="1" step="0.1">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cirugías & Utilización</div>
+    <div class="fields-grid">
+      <div class="field"><label>Cirugías realizadas</label><input type="number" id="f-cirugias" placeholder="503"></div>
+      <div class="field"><label>Δ vs mes ant. (%)</label><input type="number" id="f-deltaCirc" placeholder="-21.5" step="0.1"></div>
+      <div class="field"><label>Utilización %</label><input type="number" id="f-utilizacion" placeholder="29" step="0.1"></div>
+      <div class="field"><label>Δ utilización (%)</label><input type="number" id="f-deltaUtil" placeholder="-6.1" step="0.1"></div>
+      <div class="field"><label>Hs disponibles no usadas</label><input type="number" id="f-hsDisponiblesNoUsadas" placeholder="2494"></div>
+      <div class="field"><label>Hs utilizadas</label><input type="number" id="f-hsUtilizadas" placeholder="1034"></div>
+      <div class="field"><label>Hs abiertas</label><input type="number" id="f-hsAbiertas" placeholder="3528"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cancelaciones</div>
+    <div class="fields-grid">
+      <div class="field"><label>Cancelación %</label><input type="number" id="f-cancelacion" placeholder="7" step="0.1"></div>
+      <div class="field"><label>Δ cancelación (%)</label><input type="number" id="f-deltaCancela" placeholder="0" step="0.1"></div>
+      <div class="field"><label>Cx canceladas &lt;48hs</label><input type="number" id="f-cxCanceladas" placeholder="40"></div>
+      <div class="field"><label>Cx canceladas total</label><input type="number" id="f-cxCanceladasTotal" placeholder="53"></div>
+      <div class="field"><label>Cx totales programadas</label><input type="number" id="f-cxTotales" placeholder="551"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Estimaciones</div>
+    <div class="fields-grid">
+      <div class="field"><label>Estim. ONTIME %</label><input type="number" id="f-estimacion" placeholder="23" step="0.1"></div>
+      <div class="field"><label>Estimación prom (min)</label><input type="number" id="f-estimProm" placeholder="108" step="0.1"></div>
+      <div class="field"><label>Duración real prom (min)</label><input type="number" id="f-durRealProm" placeholder="156" step="0.1"></div>
+      <div class="field"><label>Dif. estimación (min)</label><input type="number" id="f-difEstim" placeholder="-47" step="0.1"></div>
+      <div class="field"><label>Subestimadas %</label><input type="number" id="f-subestimadas" placeholder="34" step="0.1"></div>
+      <div class="field"><label>Sobreestimadas %</label><input type="number" id="f-sobreestimadas" placeholder="43" step="0.1"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Atrasos</div>
+    <div class="fields-grid">
+      <div class="field"><label>Atraso promedio (min)</label><input type="number" id="f-atraso" placeholder="50" step="0.1"></div>
+      <div class="field"><label>Δ atraso (%)</label><input type="number" id="f-deltaAtraso" placeholder="0" step="0.1"></div>
+      <div class="field"><label>Atraso propio (min)</label><input type="number" id="f-atrasoPropio" placeholder="43" step="0.1"></div>
+      <div class="field"><label>Hs de atraso total</label><input type="number" id="f-hsAtraso" placeholder="137" step="0.1"></div>
+      <div class="field"><label>Cx demoradas %</label><input type="number" id="f-cxDemoradas" placeholder="61" step="0.1"></div>
+      <div class="field"><label>Inicio en horario %</label><input type="number" id="f-iniciOntime" placeholder="39" step="0.1"></div>
+      <div class="field"><label>Adelantadas %</label><input type="number" id="f-adelantadas" placeholder="15" step="0.1"></div>
+      <div class="field"><label>En horario %</label><input type="number" id="f-enHorario" placeholder="24" step="0.1"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Agendamiento</div>
+    <div class="fields-grid">
+      <div class="field"><label>Agendamiento %</label><input type="number" id="f-agendamiento" placeholder="91.7" step="0.1"></div>
+      <div class="field"><label>Δ agendamiento (%)</label><input type="number" id="f-deltaAgend" placeholder="0" step="0.1"></div>
+      <div class="field"><label>Agendadas</label><input type="number" id="f-agendadas" placeholder="461"></div>
+      <div class="field"><label>Sin agendar</label><input type="number" id="f-sinAgendar" placeholder="42"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Bloques</div>
+    <div class="fields-grid">
+      <div class="field"><label>Bloques %</label><input type="number" id="f-bloques" placeholder="52.7" step="0.1"></div>
+      <div class="field"><label>Hs bloque asignadas</label><input type="number" id="f-hsBloque" placeholder="1138.6" step="0.1"></div>
+      <div class="field"><label>Hs bloque utilizadas (in)</label><input type="number" id="f-hsIn" placeholder="599.6" step="0.1"></div>
+      <div class="field"><label>Hs bloque planificadas</label><input type="number" id="f-hsPlanIn" placeholder="581.9" step="0.1"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Calidad de datos</div>
+    <div class="fields-grid">
+      <div class="field"><label>Calidad %</label><input type="number" id="f-calidad" placeholder="97.4" step="0.1"></div>
+      <div class="field"><label>Cx completas</label><input type="number" id="f-cxCompletas" placeholder="490"></div>
+      <div class="field"><label>Apertura %</label><input type="number" id="f-apertura" placeholder="99.4" step="0.01"></div>
+      <div class="field"><label>Cierre %</label><input type="number" id="f-cierre" placeholder="99.4" step="0.01"></div>
+      <div class="field"><label>Duración 24hs %</label><input type="number" id="f-duracion24" placeholder="98.8" step="0.01"></div>
+      <div class="field"><label>Fecha ok %</label><input type="number" id="f-fechaOk" placeholder="99.2" step="0.01"></div>
+      <div class="field"><label>Cx UP distinta #</label><input type="number" id="f-cxUPdistinta" placeholder="8"></div>
+      <div class="field"><label>Aper-cierre 24hs #</label><input type="number" id="f-aperturaCierre24" placeholder="6"></div>
+      <div class="field"><label>Cx fecha distinta #</label><input type="number" id="f-cxFechaDistinta" placeholder="4"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SECTION: UTILIZACIÓN ══════════ -->
+<div id="sec-utilizacion" class="form-section">
+  <div class="form-title">Utilización</div>
+  <div class="form-subtitle">Quirófanos y días de semana</div>
+
+  <div class="card">
+    <div class="card-title">Utilización por quirófano (%)</div>
+    <div class="q-row">
+      <div class="field"><label>Q1</label><input type="number" id="f-q1" placeholder="34.12" step="0.01"></div>
+      <div class="field"><label>Q2</label><input type="number" id="f-q2" placeholder="30.42" step="0.01"></div>
+      <div class="field"><label>Q3</label><input type="number" id="f-q3" placeholder="39.24" step="0.01"></div>
+      <div class="field"><label>Q4</label><input type="number" id="f-q4" placeholder="16.24" step="0.01"></div>
+      <div class="field"><label>Q5</label><input type="number" id="f-q5" placeholder="27.33" step="0.01"></div>
+      <div class="field"><label>Q6</label><input type="number" id="f-q6" placeholder="24.84" step="0.01"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Utilización por día de semana</div>
+    <p class="hint" style="margin-bottom:10px;color:var(--text-3);font-size:11px;">Dejá vacío (en blanco) los quirófanos cerrados ese día.</p>
+    <table class="dias-table" id="dias-table">
+      <thead>
+        <tr>
+          <th>Día</th><th>Util %</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Q5</th><th>Q6</th>
+        </tr>
+      </thead>
+      <tbody id="dias-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════ SECTION: VOLUMEN ══════════ -->
+<div id="sec-volumen" class="form-section">
+  <div class="form-title">Volumen quirúrgico</div>
+  <div class="form-subtitle">Áreas, procedimientos, cirujanos e instrumental</div>
+
+  <div class="card">
+    <div class="card-title">Por área quirúrgica (areas)</div>
+    <div class="format-box"><strong>Formato:</strong> Nombre del área, porcentaje<br>Cx Abdominal, 28.43<br>Cx Urológica, 21.87</div>
+    <div class="field"><textarea id="f-areas" placeholder="Cx Abdominal, 28.43&#10;Cx Urológica, 21.87&#10;Cx Cabeza y Cuello, 12.72"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Procedimientos top (procs)</div>
+    <div class="format-box"><strong>Formato:</strong> Nombre del procedimiento, cantidad<br>Colocación de Portal, 30<br>Práctica no encontrada, 30</div>
+    <div class="field"><textarea id="f-procs" placeholder="Colocación de Portal, 30&#10;Práctica no encontrada, 30"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cirujanos (cirujanos)</div>
+    <div class="format-box"><strong>Formato:</strong> Nombre del cirujano, cantidad de cirugías<br>Camean Juan Jorge, 50<br>Merlo Ignacio Guillermo, 37</div>
+    <div class="field"><textarea id="f-cirujanos" placeholder="Camean Juan Jorge, 50&#10;Merlo Ignacio Guillermo, 37"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Instrumental (instrumental)</div>
+    <div class="format-box"><strong>Formato:</strong> Nombre del instrumento, cantidad de usos<br>Arco en C, 40<br>Ecógrafo Intraoperatorio, 9</div>
+    <div class="field"><textarea id="f-instrumental" placeholder="Arco en C, 40&#10;Ecógrafo Intraoperatorio, 9"></textarea></div>
+  </div>
+</div>
+
+<!-- ══════════ SECTION: BLOQUES ══════════ -->
+<div id="sec-bloques" class="form-section">
+  <div class="form-title">Bloques quirúrgicos</div>
+  <div class="form-subtitle">Utilización de bloques por cirujano o servicio</div>
+
+  <div class="card">
+    <div class="card-title">Cirujanos / Servicios con bloque (bloqCirujanos)</div>
+    <div class="format-box">
+      <strong>Formato:</strong> Nombre, % Utilización, Hs Asignadas, Cx Planificadas, Cx Utilizadas, Cx Dentro, Cx Fuera<br>
+      Urología, 76.3, 151.8, 85, 138, 116, 3<br>
+      Huertas Eduardo, 51.3, 104.8, 65, 94, 54, 35
+    </div>
+    <div class="field">
+      <textarea id="f-bloqCirujanos" rows="12" placeholder="Urología, 76.3, 151.8, 85, 138, 116, 3&#10;Huertas Eduardo, 51.3, 104.8, 65, 94, 54, 35"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SECTION: ATRASOS ══════════ -->
+<div id="sec-atrasos" class="form-section">
+  <div class="form-title">Atrasos quirúrgicos</div>
+  <div class="form-subtitle">Distribución, horarios y top cirujanos</div>
+
+  <div class="card">
+    <div class="card-title">Distribución por magnitud (atrasoMagnitud)</div>
+    <div class="format-box"><strong>Formato:</strong> Franja horaria, porcentaje (%)<br>16-30 min, 23.03<br>31-45 min, 19.08</div>
+    <div class="field"><textarea id="f-atrasoMagnitud" placeholder="16-30 min, 23.03&#10;31-45 min, 19.08&#10;46-60 min, 20.39&#10;61-90 min, 16.45&#10;>90 min, 21.05"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Por horario de turno (atrasoHorario)</div>
+    <div class="format-box"><strong>Formato:</strong> Hora, cantidad demoradas, % demoradas<br>8hs, 42, 74<br>9hs, 46, 64</div>
+    <div class="field"><textarea id="f-atrasoHorario" placeholder="8hs, 42, 74&#10;9hs, 46, 64&#10;12hs, 58, 54"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Top 10 cirujanos con atrasos (atrasosCirujanos)</div>
+    <div class="format-box"><strong>Formato:</strong> Nombre, total cx, % demoradas, atraso propio (min)<br>Camean Juan Jorge, 50, 70%, 36<br>Merlo Ignacio Guillermo, 37, 51%, 43</div>
+    <div class="field"><textarea id="f-atrasosCirujanos" placeholder="Camean Juan Jorge, 50, 70%, 36&#10;Merlo Ignacio Guillermo, 37, 51%, 43"></textarea></div>
+  </div>
+</div>
+
+<!-- ══════════ SECTION: AGENDAMIENTO ══════════ -->
+<div id="sec-agendamiento" class="form-section">
+  <div class="form-title">Agendamiento</div>
+  <div class="form-subtitle">Anticipación, turnos y posoperatorio</div>
+
+  <div class="card">
+    <div class="card-title">Distribución por anticipación (anticipAgend)</div>
+    <div class="format-box"><strong>Formato:</strong> Franja, porcentaje (%)<br>&lt; 12hs, 8.35<br>&gt; 5 días, 67.59</div>
+    <div class="field"><textarea id="f-anticipAgend" placeholder="< 12hs, 8.35&#10;12-24hs, 6.36&#10;24-48hs, 6.36&#10;2-5 días, 11.33&#10;> 5 días, 67.59&#10;Post-prog., 0.00"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Por turno (agendTurnos)</div>
+    <div class="format-box"><strong>Formato:</strong> Turno, % agendado, agendadas, realizadas, % sub, % sobre<br>Mañana, 94.2, 275, 292, 36, 38<br>Tarde, 88.8, 175, 197, 29, 53<br>Noche, 90.9, 10, 11, 90, 10</div>
+    <div class="field"><textarea id="f-agendTurnos" placeholder="Mañana, 94.2, 275, 292, 36, 38&#10;Tarde, 88.8, 175, 197, 29, 53&#10;Noche, 90.9, 10, 11, 90, 10"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Posoperatorio (agendPostop)</div>
+    <div class="format-box"><strong>Formato:</strong> Tipo, % agendado, agendadas, realizadas, % sub, % sobre<br>Ambulatorio, 100.0, 273, 273, 32, 50<br>Internación, 79.7, 145, 182, 34, 36<br>Saavedra, 100.0, 15, 15, 33, 33<br>UTI, 84.8, 28, 33, 57, 11</div>
+    <div class="field"><textarea id="f-agendPostop" placeholder="Ambulatorio, 100.0, 273, 273, 32, 50&#10;Internación, 79.7, 145, 182, 34, 36&#10;Saavedra, 100.0, 15, 15, 33, 33&#10;UTI, 84.8, 28, 33, 57, 11"></textarea></div>
+  </div>
+</div>
+
+<!-- ══════════ SECTION: CANCELACIONES ══════════ -->
+<div id="sec-cancelaciones" class="form-section">
+  <div class="form-title">Cancelaciones</div>
+  <div class="form-subtitle">Motivos, anticipación, áreas, financiadores y cirujanos</div>
+
+  <div class="card">
+    <div class="card-title">Motivos principales (motivosCancela)</div>
+    <div class="format-box"><strong>Formato:</strong> Motivo, cantidad<br>Motivos del Paciente, 25<br>Reprogramación, 11</div>
+    <div class="field"><textarea id="f-motivosCancela" placeholder="Motivos del Paciente, 25&#10;Reprogramación, 11&#10;Motivos Económicos/Cobertura, 9"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Detalle de motivos (detallesCancela)</div>
+    <div class="format-box"><strong>Formato:</strong> Detalle, cantidad<br>Razones médicas, 9<br>Sin cobertura, 8</div>
+    <div class="field"><textarea id="f-detallesCancela" placeholder="Razones médicas, 9&#10;Sin cobertura, 8&#10;Decide no operarse, 5"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Por anticipación (anticipCancela)</div>
+    <div class="format-box"><strong>Formato:</strong> Franja, porcentaje (%)<br>Mismo día, 28.30<br>Día previo, 35.85</div>
+    <div class="field"><textarea id="f-anticipCancela" placeholder="Mismo día, 28.30&#10;Día previo, 35.85&#10;2 días, 11.32&#10;2-5 días, 7.55&#10;Más de 5 días, 16.98"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Por área quirúrgica (areasCancela)</div>
+    <div class="format-box"><strong>Formato:</strong> Área, cantidad<br>Cx Abdominal, 12<br>Cx Urológica, 10</div>
+    <div class="field"><textarea id="f-areasCancela" placeholder="Cx Abdominal, 12&#10;Cx Urológica, 10&#10;Cx Ortopédica y Traumatología, 8"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Por financiador (financiadoresCancela)</div>
+    <div class="format-box"><strong>Formato:</strong> Financiador (unificado), cantidad<br>Swiss Medical, 9<br>OSDE, 8</div>
+    <div class="field"><textarea id="f-financiadoresCancela" placeholder="Swiss Medical, 9&#10;OSDE, 8&#10;Galeno Argentina S.A., 2"></textarea></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Por cirujano (cancelaCirujanos)</div>
+    <div class="format-box"><strong>Formato:</strong> Nombre, total cx, cx canceladas, % cancelación<br>Merlo Ignacio Guillermo, 42, 5, 12%<br>Fernandez Candia Gastón, 32, 4, 13%</div>
+    <div class="field"><textarea id="f-cancelaCirujanos" placeholder="Merlo Ignacio Guillermo, 42, 5, 12%&#10;Fernandez Candia Gastón, 32, 4, 13%"></textarea></div>
+  </div>
+</div>
+
+<!-- ══════════ SECTION: ESTIMACIONES ══════════ -->
+<div id="sec-estimaciones" class="form-section">
+  <div class="form-title">Estimaciones de tiempo</div>
+  <div class="form-subtitle">Desvío por cirujano</div>
+
+  <div class="card">
+    <div class="card-title">Cirujanos con mayor desvío (estimCirujanos)</div>
+    <div class="format-box"><strong>Formato:</strong> Nombre, desvío prom (min), duración planificada (min), duración real (min)<br>Pedraza Salazar I., 262.15, 389, 12825<br>Huertas Eduardo, 293.69, 184, 6453</div>
+    <div class="field"><textarea id="f-estimCirujanos" rows="10" placeholder="Pedraza Salazar I., 262.15, 389, 12825&#10;Huertas Eduardo, 293.69, 184, 6453"></textarea></div>
+  </div>
+</div>
+
+<!-- ══════════ SECTION: OPORTUNIDADES ══════════ -->
+<div id="sec-oportunidades" class="form-section">
+  <div class="form-title">Oportunidades de mejora</div>
+  <div class="form-subtitle">Tres oportunidades destacadas del mes (aparecen en Resumen mensual)</div>
+
+  <div class="card">
+    <div class="card-title">Oportunidad 1</div>
+    <div class="fields-grid-2">
+      <div class="field">
+        <label>Descripción</label>
+        <textarea id="f-opp1-text" rows="3" placeholder="Utilización 27% — 3.168 hs disponibles sin uso. Quirófano 4 (83.8%) es referencia de eficiencia."></textarea>
+      </div>
+      <div class="field">
+        <label>Etiqueta</label>
+        <input type="text" id="f-opp1-label" placeholder="Prioridad Alta — Utilización">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Oportunidad 2</div>
+    <div class="fields-grid-2">
+      <div class="field">
+        <label>Descripción</label>
+        <textarea id="f-opp2-text" rows="3" placeholder="56% de cirugías con demora · promedio 49 min. Turno 8hs tiene 119 cx demoradas."></textarea>
+      </div>
+      <div class="field">
+        <label>Etiqueta</label>
+        <input type="text" id="f-opp2-label" placeholder="Prioridad Alta — Atrasos">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Oportunidad 3</div>
+    <div class="fields-grid-2">
+      <div class="field">
+        <label>Descripción</label>
+        <textarea id="f-opp3-text" rows="3" placeholder="Diferencia −46 min/procedimiento. Acumulado de 199 hs de atraso por subestimación."></textarea>
+      </div>
+      <div class="field">
+        <label>Etiqueta</label>
+        <input type="text" id="f-opp3-label" placeholder="Prioridad Media — Estimaciones">
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<div class="toast" id="toast"><span class="toast-icon">✓</span><span id="toast-msg">Guardado correctamente</span></div>
+
+<script>
+/* ══════════ CONSTANTS ══════════ */
+var MONTH_MAP={
+  'Enero':'ene','Febrero':'feb','Marzo':'mar','Abril':'abr',
+  'Mayo':'may','Junio':'jun','Julio':'jul','Agosto':'ago',
+  'Septiembre':'sep','Octubre':'oct','Noviembre':'nov','Diciembre':'dic'
+};
+var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+/* ══════════ STATE ══════════ */
+var currentKey='';
+
+/* ══════════ localStorage ══════════ */
+function loadAllData(){
+  try{return JSON.parse(localStorage.getItem('IAF_DATA')||'{"months":{}}');}
+  catch(e){return {months:{}};}
+}
+function saveAllData(data){
+  localStorage.setItem('IAF_DATA',JSON.stringify(data));
+}
+
+/* ══════════ MONTH KEY ══════════ */
+function labelToKey(label){
+  var parts=(label||'').trim().split(/\s+/);
+  var mon=MONTH_MAP[parts[0]]||(parts[0]||'mes').toLowerCase().substring(0,3);
+  var yr=parts[1]||'2026';
+  return mon+yr;
+}
+
+/* ══════════ EMPTY MONTH ══════════ */
+function emptyMonth(){
+  return{
+    label:'',period:'',perf:'BAJA',scoring:1,
+    cirugias:null,deltaCirc:null,
+    utilizacion:null,deltaUtil:null,
+    cancelacion:null,deltaCancela:null,cxCanceladas:null,cxCanceladasTotal:null,cxTotales:null,
+    estimacion:null,estimProm:null,durRealProm:null,difEstim:null,
+    atraso:null,deltaAtraso:null,atrasoPropio:null,hsAtraso:null,
+    agendamiento:null,deltaAgend:null,agendadas:null,sinAgendar:null,
+    bloques:null,hsBloque:null,hsIn:null,hsPlanIn:null,
+    calidad:null,cxCompletas:null,
+    cxDemoradas:null,iniciOntime:null,adelantadas:null,enHorario:null,
+    hsDisponiblesNoUsadas:null,hsUtilizadas:null,hsAbiertas:null,
+    subestimadas:null,sobreestimadas:null,
+    apertura:null,cierre:null,duracion24:null,fechaOk:null,
+    cxUPdistinta:null,aperturaCierre24:null,cxFechaDistinta:null,
+    quirofanos:[null,null,null,null,null,null],
+    diasSemana:[
+      {dia:'Lunes',util:null,q:[null,null,null,null,null,null]},
+      {dia:'Martes',util:null,q:[null,null,null,null,null,null]},
+      {dia:'Miércoles',util:null,q:[null,null,null,null,null,null]},
+      {dia:'Jueves',util:null,q:[null,null,null,null,null,null]},
+      {dia:'Viernes',util:null,q:[null,null,null,null,null,null]},
+      {dia:'Sábado',util:null,q:[null,null,null,null,null,null]},
+    ],
+    bloqCirujanos:[],
+    areas:[],procs:[],cirujanos:[],instrumental:[],
+    motivosCancela:[],detallesCancela:[],anticipCancela:[],
+    areasCancela:[],cancelaCirujanos:[],financiadoresCancela:[],
+    anticipAgend:[],
+    agendTurnos:[
+      {turno:'Mañana',agend:null,agendadas:null,realizadas:null,sub:null,sobre:null,anticip:[]},
+      {turno:'Tarde',agend:null,agendadas:null,realizadas:null,sub:null,sobre:null,anticip:[]},
+      {turno:'Noche',agend:null,agendadas:null,realizadas:null,sub:null,sobre:null,anticip:[]},
+    ],
+    agendPostop:[
+      {tipo:'Ambulatorio',agend:null,agendadas:null,realizadas:null,sub:null,sobre:null},
+      {tipo:'Internación',agend:null,agendadas:null,realizadas:null,sub:null,sobre:null},
+      {tipo:'Saavedra',agend:null,agendadas:null,realizadas:null,sub:null,sobre:null},
+      {tipo:'UTI',agend:null,agendadas:null,realizadas:null,sub:null,sobre:null},
+    ],
+    atrasoMagnitud:[],atrasoHorario:[],atrasosCirujanos:[],
+    estimCirujanos:[],
+    opp1:['',''],opp2:['',''],opp3:['',''],
+  };
+}
+
+/* ══════════ PARSE HELPERS ══════════ */
+function n(v){var x=parseFloat(v);return isNaN(x)?null:x;}
+function ni(v){var x=parseInt(v);return isNaN(x)?null:x;}
+
+function parseLines(text,ncols){
+  var rows=[];
+  var lines=(text||'').trim().split('\n');
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i].trim();
+    if(!l)continue;
+    var p=l.split(',');
+    var row=[p[0]?p[0].trim():''];
+    for(var c=1;c<ncols;c++){
+      var raw=p[c]?(p[c].trim()):'';
+      row.push(raw);
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function parseLines2num(text){
+  // [[name, float], ...]
+  var r=parseLines(text,2);
+  return r.map(function(row){return[row[0],n(row[1])||0];});
+}
+
+function parseLines3num(text){
+  // [[name, n, n], ...]
+  var r=parseLines(text,3);
+  return r.map(function(row){return[row[0],n(row[1])||0,n(row[2])||0];});
+}
+
+function parseBloqCirujanos(text){
+  var r=parseLines(text,7);
+  return r.map(function(row){
+    return[row[0],n(row[1])||0,{asig:n(row[2])||0,plan:n(row[3])||0,util:n(row[4])||0,dentro:n(row[5])||0,fuera:n(row[6])||0}];
+  });
+}
+
+function parseAgendTurnos(text){
+  var r=parseLines(text,6);
+  return r.map(function(row){
+    return{turno:row[0],agend:n(row[1]),agendadas:ni(row[2]),realizadas:ni(row[3]),sub:n(row[4]),sobre:n(row[5]),anticip:[]};
+  });
+}
+
+function parseAgendPostop(text){
+  var r=parseLines(text,6);
+  return r.map(function(row){
+    return{tipo:row[0],agend:n(row[1]),agendadas:ni(row[2]),realizadas:ni(row[3]),sub:n(row[4]),sobre:n(row[5])};
+  });
+}
+
+function parseCancelaCirujanos(text){
+  var r=parseLines(text,4);
+  return r.map(function(row){return[row[0],ni(row[1])||0,ni(row[2])||0,row[3]||'0%'];});
+}
+
+function parseAtrasosCirujanos(text){
+  var r=parseLines(text,4);
+  return r.map(function(row){return[row[0],ni(row[1])||0,row[2]||'0%',ni(row[3])||0];});
+}
+
+function parseEstimCirujanos(text){
+  var r=parseLines(text,4);
+  return r.map(function(row){return[row[0],n(row[1])||0,n(row[2])||0,n(row[3])||0];});
+}
+
+function parseAtrasoHorario(text){
+  var r=parseLines(text,3);
+  return r.map(function(row){return[row[0],ni(row[1])||0,ni(row[2])||0];});
+}
+
+/* ══════════ SERIALIZE HELPERS ══════════ */
+function serLines2(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){return r[0]+', '+r[1];}).join('\n');
+}
+function serLines3(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){return r[0]+', '+r[1]+', '+r[2];}).join('\n');
+}
+function serBloq(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){
+    var o=r[2]||{};
+    return[r[0],r[1],o.asig,o.plan,o.util,o.dentro,o.fuera].join(', ');
+  }).join('\n');
+}
+function serAgendTurnos(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){return[r.turno,r.agend,r.agendadas,r.realizadas,r.sub,r.sobre].join(', ');}).join('\n');
+}
+function serAgendPostop(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){return[r.tipo,r.agend,r.agendadas,r.realizadas,r.sub,r.sobre].join(', ');}).join('\n');
+}
+function serCancelaCirujanos(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){return r.join(', ');}).join('\n');
+}
+function serAtrasosCirujanos(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){return r.join(', ');}).join('\n');
+}
+function serEstimCirujanos(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){return r.join(', ');}).join('\n');
+}
+function serAtrasoHorario(arr){
+  if(!arr||!arr.length)return'';
+  return arr.map(function(r){return r.join(', ');}).join('\n');
+}
+
+/* ══════════ DIAS TABLE ══════════ */
+function buildDiasTable(){
+  var tbody=document.getElementById('dias-tbody');
+  tbody.innerHTML='';
+  for(var i=0;i<DIAS.length;i++){
+    var tr=document.createElement('tr');
+    var cells='<td>'+DIAS[i]+'</td>';
+    cells+='<td><input type="number" id="dias-util-'+i+'" step="0.01" placeholder="0"></td>';
+    for(var q=0;q<6;q++){
+      cells+='<td><input type="number" id="dias-q'+i+'-'+q+'" step="0.01" placeholder=""></td>';
+    }
+    tr.innerHTML=cells;
+    tbody.appendChild(tr);
+  }
+}
+
+function fillDiasTable(diasSemana){
+  if(!diasSemana)return;
+  for(var i=0;i<Math.min(diasSemana.length,DIAS.length);i++){
+    var d=diasSemana[i];
+    var utilEl=document.getElementById('dias-util-'+i);
+    if(utilEl)utilEl.value=d.util!=null?d.util:'';
+    for(var q=0;q<6;q++){
+      var qEl=document.getElementById('dias-q'+i+'-'+q);
+      if(qEl)qEl.value=(d.q&&d.q[q]!=null)?d.q[q]:'';
+    }
+  }
+}
+
+function collectDiasTable(){
+  var result=[];
+  for(var i=0;i<DIAS.length;i++){
+    var utilEl=document.getElementById('dias-util-'+i);
+    var util=utilEl?n(utilEl.value):null;
+    var q=[];
+    for(var qi=0;qi<6;qi++){
+      var qEl=document.getElementById('dias-q'+i+'-'+qi);
+      q.push(qEl&&qEl.value!==''?n(qEl.value):null);
+    }
+    result.push({dia:DIAS[i],util:util,q:q});
+  }
+  return result;
+}
+
+/* ══════════ GET/SET FIELD ══════════ */
+function fv(id){var el=document.getElementById(id);return el?el.value:'';}
+function fs(id,val){var el=document.getElementById(id);if(el)el.value=(val!=null&&val!==undefined)?val:'';}
+
+/* ══════════ FILL FORM FROM DATA ══════════ */
+function fillForm(d){
+  if(!d)d=emptyMonth();
+  // Info
+  fs('f-label',d.label);fs('f-period',d.period);fs('f-perf',d.perf);fs('f-scoring',d.scoring);
+  // Cx
+  fs('f-cirugias',d.cirugias);fs('f-deltaCirc',d.deltaCirc);
+  fs('f-utilizacion',d.utilizacion);fs('f-deltaUtil',d.deltaUtil);
+  fs('f-hsDisponiblesNoUsadas',d.hsDisponiblesNoUsadas);fs('f-hsUtilizadas',d.hsUtilizadas);fs('f-hsAbiertas',d.hsAbiertas);
+  // Cancela
+  fs('f-cancelacion',d.cancelacion);fs('f-deltaCancela',d.deltaCancela);
+  fs('f-cxCanceladas',d.cxCanceladas);fs('f-cxCanceladasTotal',d.cxCanceladasTotal);fs('f-cxTotales',d.cxTotales);
+  // Estim
+  fs('f-estimacion',d.estimacion);fs('f-estimProm',d.estimProm);fs('f-durRealProm',d.durRealProm);fs('f-difEstim',d.difEstim);
+  fs('f-subestimadas',d.subestimadas);fs('f-sobreestimadas',d.sobreestimadas);
+  // Atrasos
+  fs('f-atraso',d.atraso);fs('f-deltaAtraso',d.deltaAtraso);fs('f-atrasoPropio',d.atrasoPropio);fs('f-hsAtraso',d.hsAtraso);
+  fs('f-cxDemoradas',d.cxDemoradas);fs('f-iniciOntime',d.iniciOntime);fs('f-adelantadas',d.adelantadas);fs('f-enHorario',d.enHorario);
+  // Agend
+  fs('f-agendamiento',d.agendamiento);fs('f-deltaAgend',d.deltaAgend);fs('f-agendadas',d.agendadas);fs('f-sinAgendar',d.sinAgendar);
+  // Bloques
+  fs('f-bloques',d.bloques);fs('f-hsBloque',d.hsBloque);fs('f-hsIn',d.hsIn);fs('f-hsPlanIn',d.hsPlanIn);
+  // Calidad
+  fs('f-calidad',d.calidad);fs('f-cxCompletas',d.cxCompletas);
+  fs('f-apertura',d.apertura);fs('f-cierre',d.cierre);fs('f-duracion24',d.duracion24);fs('f-fechaOk',d.fechaOk);
+  fs('f-cxUPdistinta',d.cxUPdistinta);fs('f-aperturaCierre24',d.aperturaCierre24);fs('f-cxFechaDistinta',d.cxFechaDistinta);
+  // Quirofanos
+  var q=d.quirofanos||[null,null,null,null,null,null];
+  for(var i=0;i<6;i++) fs('f-q'+(i+1),q[i]);
+  // Dias
+  fillDiasTable(d.diasSemana);
+  // Volumen
+  fs('f-areas',serLines2(d.areas));fs('f-procs',serLines2(d.procs));
+  fs('f-cirujanos',serLines2(d.cirujanos));fs('f-instrumental',serLines2(d.instrumental));
+  // Bloques cirujanos
+  fs('f-bloqCirujanos',serBloq(d.bloqCirujanos));
+  // Atrasos
+  fs('f-atrasoMagnitud',serLines2(d.atrasoMagnitud));
+  fs('f-atrasoHorario',serAtrasoHorario(d.atrasoHorario));
+  fs('f-atrasosCirujanos',serAtrasosCirujanos(d.atrasosCirujanos));
+  // Agendamiento
+  fs('f-anticipAgend',serLines2(d.anticipAgend));
+  fs('f-agendTurnos',serAgendTurnos(d.agendTurnos));
+  fs('f-agendPostop',serAgendPostop(d.agendPostop));
+  // Cancelaciones
+  fs('f-motivosCancela',serLines2(d.motivosCancela));
+  fs('f-detallesCancela',serLines2(d.detallesCancela));
+  fs('f-anticipCancela',serLines2(d.anticipCancela));
+  fs('f-areasCancela',serLines2(d.areasCancela));
+  fs('f-financiadoresCancela',serLines2(d.financiadoresCancela));
+  fs('f-cancelaCirujanos',serCancelaCirujanos(d.cancelaCirujanos));
+  // Estimaciones
+  fs('f-estimCirujanos',serEstimCirujanos(d.estimCirujanos));
+  // Oportunidades
+  var o1=d.opp1||['',''],o2=d.opp2||['',''],o3=d.opp3||['',''];
+  fs('f-opp1-text',o1[0]);fs('f-opp1-label',o1[1]);
+  fs('f-opp2-text',o2[0]);fs('f-opp2-label',o2[1]);
+  fs('f-opp3-text',o3[0]);fs('f-opp3-label',o3[1]);
+}
+
+/* ══════════ COLLECT FORM → OBJECT ══════════ */
+function collectForm(){
+  var d={};
+  d.label=fv('f-label').trim();
+  d.period=fv('f-period').trim();
+  d.perf=fv('f-perf')||'BAJA';
+  d.scoring=n(fv('f-scoring'));
+  d.cirugias=n(fv('f-cirugias'));d.deltaCirc=n(fv('f-deltaCirc'));
+  d.utilizacion=n(fv('f-utilizacion'));d.deltaUtil=n(fv('f-deltaUtil'));
+  d.hsDisponiblesNoUsadas=n(fv('f-hsDisponiblesNoUsadas'));
+  d.hsUtilizadas=n(fv('f-hsUtilizadas'));d.hsAbiertas=n(fv('f-hsAbiertas'));
+  d.cancelacion=n(fv('f-cancelacion'));d.deltaCancela=n(fv('f-deltaCancela'));
+  d.cxCanceladas=ni(fv('f-cxCanceladas'));d.cxCanceladasTotal=ni(fv('f-cxCanceladasTotal'));d.cxTotales=ni(fv('f-cxTotales'));
+  d.estimacion=n(fv('f-estimacion'));d.estimProm=n(fv('f-estimProm'));
+  d.durRealProm=n(fv('f-durRealProm'));d.difEstim=n(fv('f-difEstim'));
+  d.subestimadas=n(fv('f-subestimadas'));d.sobreestimadas=n(fv('f-sobreestimadas'));
+  d.atraso=n(fv('f-atraso'));d.deltaAtraso=n(fv('f-deltaAtraso'));
+  d.atrasoPropio=n(fv('f-atrasoPropio'));d.hsAtraso=n(fv('f-hsAtraso'));
+  d.cxDemoradas=n(fv('f-cxDemoradas'));d.iniciOntime=n(fv('f-iniciOntime'));
+  d.adelantadas=n(fv('f-adelantadas'));d.enHorario=n(fv('f-enHorario'));
+  d.agendamiento=n(fv('f-agendamiento'));d.deltaAgend=n(fv('f-deltaAgend'));
+  d.agendadas=ni(fv('f-agendadas'));d.sinAgendar=ni(fv('f-sinAgendar'));
+  d.bloques=n(fv('f-bloques'));d.hsBloque=n(fv('f-hsBloque'));
+  d.hsIn=n(fv('f-hsIn'));d.hsPlanIn=n(fv('f-hsPlanIn'));
+  d.calidad=n(fv('f-calidad'));d.cxCompletas=ni(fv('f-cxCompletas'));
+  d.apertura=n(fv('f-apertura'));d.cierre=n(fv('f-cierre'));
+  d.duracion24=n(fv('f-duracion24'));d.fechaOk=n(fv('f-fechaOk'));
+  d.cxUPdistinta=ni(fv('f-cxUPdistinta'));d.aperturaCierre24=ni(fv('f-aperturaCierre24'));d.cxFechaDistinta=ni(fv('f-cxFechaDistinta'));
+  // Quirofanos
+  var q=[];
+  for(var i=1;i<=6;i++){var v=n(fv('f-q'+i));q.push(v);}
+  d.quirofanos=q;
+  // Dias semana
+  d.diasSemana=collectDiasTable();
+  // Arrays
+  d.areas=parseLines2num(fv('f-areas'));
+  d.procs=parseLines2num(fv('f-procs'));
+  d.cirujanos=parseLines2num(fv('f-cirujanos'));
+  d.instrumental=parseLines2num(fv('f-instrumental'));
+  d.bloqCirujanos=parseBloqCirujanos(fv('f-bloqCirujanos'));
+  d.atrasoMagnitud=parseLines2num(fv('f-atrasoMagnitud'));
+  d.atrasoHorario=parseAtrasoHorario(fv('f-atrasoHorario'));
+  d.atrasosCirujanos=parseAtrasosCirujanos(fv('f-atrasosCirujanos'));
+  d.anticipAgend=parseLines2num(fv('f-anticipAgend'));
+  d.agendTurnos=parseAgendTurnos(fv('f-agendTurnos'));
+  d.agendPostop=parseAgendPostop(fv('f-agendPostop'));
+  d.motivosCancela=parseLines2num(fv('f-motivosCancela'));
+  d.detallesCancela=parseLines2num(fv('f-detallesCancela'));
+  d.anticipCancela=parseLines2num(fv('f-anticipCancela'));
+  d.areasCancela=parseLines2num(fv('f-areasCancela'));
+  d.financiadoresCancela=parseLines2num(fv('f-financiadoresCancela'));
+  d.cancelaCirujanos=parseCancelaCirujanos(fv('f-cancelaCirujanos'));
+  d.estimCirujanos=parseEstimCirujanos(fv('f-estimCirujanos'));
+  d.opp1=[fv('f-opp1-text').trim(),fv('f-opp1-label').trim()];
+  d.opp2=[fv('f-opp2-text').trim(),fv('f-opp2-label').trim()];
+  d.opp3=[fv('f-opp3-text').trim(),fv('f-opp3-label').trim()];
+  return d;
+}
+
+/* ══════════ DROPDOWN ══════════ */
+function buildDropdown(){
+  var sel=document.getElementById('monthSelect');
+  var stored=loadAllData().months||{};
+  var keys=Object.keys(stored);
+  sel.innerHTML='<option value="">— Seleccionar mes —</option>';
+  keys.forEach(function(k){
+    var m=stored[k];
+    var opt=document.createElement('option');
+    opt.value=k;
+    opt.textContent=(m.label||k);
+    if(k===currentKey)opt.selected=true;
+    sel.appendChild(opt);
+  });
+  var count=document.getElementById('month-count');
+  if(count)count.textContent=keys.length+' '+(keys.length===1?'mes':'meses');
+}
+
+/* ══════════ LOAD MONTH ══════════ */
+function loadMonth(key){
+  if(!key){currentKey='';fillForm(emptyMonth());return;}
+  currentKey=key;
+  var stored=loadAllData().months||{};
+  fillForm(stored[key]||emptyMonth());
+}
+
+/* ══════════ NEW MONTH ══════════ */
+function newMonth(){
+  currentKey='';
+  document.getElementById('monthSelect').value='';
+  fillForm(emptyMonth());
+  document.getElementById('f-label').focus();
+  showToast('Nuevo mes — completá los campos y guardá','#5b4fcf');
+}
+
+/* ══════════ SAVE ══════════ */
+function saveCurrent(){
+  var d=collectForm();
+  if(!d.label){
+    document.getElementById('f-label').classList.add('error');
+    document.getElementById('f-label').focus();
+    showToast('El campo "Mes completo" es obligatorio','#ca8a04');
+    return;
+  }
+  document.getElementById('f-label').classList.remove('error');
+  var key=currentKey||labelToKey(d.label);
+  currentKey=key;
+  var allData=loadAllData();
+  allData.months=allData.months||{};
+  allData.months[key]=d;
+  saveAllData(allData);
+  buildDropdown();
+  document.getElementById('monthSelect').value=key;
+  showToast('✓ Guardado: '+d.label,'#0d7a4e');
+}
+
+/* ══════════ DELETE ══════════ */
+function deleteMonth(){
+  if(!currentKey){showToast('Seleccioná un mes primero','#ca8a04');return;}
+  var allData=loadAllData();
+  var label=(allData.months&&allData.months[currentKey])?allData.months[currentKey].label:currentKey;
+  if(!confirm('¿Eliminar '+label+'? Esta acción no se puede deshacer.'))return;
+  delete allData.months[currentKey];
+  saveAllData(allData);
+  currentKey='';
+  buildDropdown();
+  fillForm(emptyMonth());
+  document.getElementById('monthSelect').value='';
+  showToast('Mes eliminado','#ca8a04');
+}
+
+/* ══════════ EXPORT JSON ══════════ */
+function exportJSON(){
+  var allData=loadAllData();
+  var json=JSON.stringify(allData,null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='iaf_data_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('JSON exportado','#0d7a4e');
+}
+
+/* ══════════ IMPORT JSON ══════════ */
+function importJSON(event){
+  var file=event.target.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var imported=JSON.parse(e.target.result);
+      if(!imported.months)throw new Error('Formato inválido');
+      var existing=loadAllData();
+      var merged=existing.months||{};
+      for(var k in imported.months){merged[k]=imported.months[k];}
+      existing.months=merged;
+      saveAllData(existing);
+      buildDropdown();
+      showToast('✓ '+Object.keys(imported.months).length+' meses importados','#0d7a4e');
+    }catch(err){
+      showToast('Error al importar: '+err.message,'#ca8a04');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+/* ══════════ SECTION TABS ══════════ */
+function switchSection(id,el){
+  document.querySelectorAll('.section-tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.form-section').forEach(function(s){s.classList.remove('active');});
+  if(el)el.classList.add('active');
+  var sec=document.getElementById('sec-'+id);
+  if(sec)sec.classList.add('active');
+}
+
+/* ══════════ TOAST ══════════ */
+function showToast(msg,color){
+  var t=document.getElementById('toast');
+  var m=document.getElementById('toast-msg');
+  if(!t||!m)return;
+  m.textContent=msg;
+  t.style.background=color||'#1a1d24';
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2500);
+}
+
+/* ══════════ INIT ══════════ */
+window.addEventListener('load',function(){
+  buildDiasTable();
+  buildDropdown();
+  fillForm(emptyMonth());
+});
+</script>
+</body>
+</html>
