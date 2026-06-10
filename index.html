@@ -69,8 +69,6 @@ body{
 .btn-login:disabled{background:#d0d4dc;cursor:not-allowed;}
 
 .footer{margin-top:28px;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#d0d4dc;}
-
-/* Setup screen */
 .setup-hint{font-size:12px;color:#4a5068;line-height:1.7;margin-bottom:20px;}
 .setup-hint strong{color:#ba0170;}
 </style>
@@ -82,7 +80,12 @@ body{
   <div class="inst">Instituto Alexander Fleming</div>
   <div class="divider"></div>
 
+  <!-- LOGIN -->
   <div id="login-form">
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" id="usr" autocomplete="username" placeholder="Usuario">
+    </div>
     <div class="form-group">
       <label>Contraseña</label>
       <input type="password" id="pwd" autocomplete="current-password" placeholder="••••••••">
@@ -91,10 +94,15 @@ body{
     <button class="btn-login" id="btn-enter" onclick="doLogin()">Ingresar</button>
   </div>
 
+  <!-- SETUP (primera vez) -->
   <div id="setup-form" style="display:none;">
-    <p class="setup-hint">Primera vez. Creá una <strong>contraseña de acceso</strong> para proteger el sistema.</p>
+    <p class="setup-hint">Primera vez. Creá tu <strong>usuario y contraseña</strong> de acceso.</p>
     <div class="form-group">
-      <label>Nueva contraseña</label>
+      <label>Nombre de usuario</label>
+      <input type="text" id="usr-new" autocomplete="username" placeholder="Ej: ezequiel">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
       <input type="password" id="pwd-new" placeholder="Mínimo 6 caracteres">
     </div>
     <div class="form-group">
@@ -102,7 +110,7 @@ body{
       <input type="password" id="pwd-confirm" placeholder="Repetí la contraseña">
     </div>
     <div class="error-msg" id="setup-err"></div>
-    <button class="btn-login" id="btn-setup" onclick="doSetup()">Crear contraseña</button>
+    <button class="btn-login" id="btn-setup" onclick="doSetup()">Crear acceso</button>
   </div>
 
   <div class="footer">Centro Quirúrgico · Acceso restringido</div>
@@ -115,56 +123,69 @@ async function sha256(text){
 }
 
 function init(){
-  var hasHash=!!localStorage.getItem('IAF_PWD_HASH');
-  if(hasHash){
+  if(sessionStorage.getItem('IAF_UNLOCKED')==='1'){
+    window.location.href='iaf_analytics.html';
+    return;
+  }
+  var hasCredentials=!!(localStorage.getItem('IAF_PWD_HASH')&&localStorage.getItem('IAF_USR_HASH'));
+  if(hasCredentials){
     document.getElementById('login-form').style.display='block';
     document.getElementById('setup-form').style.display='none';
-    document.getElementById('pwd').focus();
+    document.getElementById('usr').focus();
     document.getElementById('pwd').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
   } else {
     document.getElementById('login-form').style.display='none';
     document.getElementById('setup-form').style.display='block';
-    document.getElementById('pwd-new').focus();
+    document.getElementById('usr-new').focus();
     document.getElementById('pwd-confirm').addEventListener('keydown',function(e){if(e.key==='Enter')doSetup();});
-  }
-  // Si ya está desbloqueado en esta sesión, ir directo
-  if(sessionStorage.getItem('IAF_UNLOCKED')==='1'){
-    window.location.href='iaf_analytics.html';
   }
 }
 
 async function doLogin(){
-  var input=document.getElementById('pwd');
+  var usrEl=document.getElementById('usr');
+  var pwdEl=document.getElementById('pwd');
   var btn=document.getElementById('btn-enter');
   var err=document.getElementById('err-msg');
-  var val=input.value;
-  if(!val){input.classList.add('error');return;}
+  usrEl.classList.remove('error');pwdEl.classList.remove('error');err.textContent='';
+  if(!usrEl.value||!pwdEl.value){
+    if(!usrEl.value)usrEl.classList.add('error');
+    if(!pwdEl.value)pwdEl.classList.add('error');
+    return;
+  }
   btn.textContent='Verificando...';btn.disabled=true;
-  var hash=await sha256(val);
-  if(hash===localStorage.getItem('IAF_PWD_HASH')){
+  var usrHash=await sha256(usrEl.value.trim().toLowerCase());
+  var pwdHash=await sha256(pwdEl.value);
+  var storedUsr=localStorage.getItem('IAF_USR_HASH');
+  var storedPwd=localStorage.getItem('IAF_PWD_HASH');
+  if(usrHash===storedUsr&&pwdHash===storedPwd){
     sessionStorage.setItem('IAF_UNLOCKED','1');
     btn.textContent='✓ Acceso concedido';
     setTimeout(function(){window.location.href='iaf_analytics.html';},400);
   } else {
-    err.textContent='Contraseña incorrecta';
-    input.classList.add('error');
-    input.value='';input.focus();
+    err.textContent='Usuario o contraseña incorrectos';
+    usrEl.classList.add('error');pwdEl.classList.add('error');
+    pwdEl.value='';
     btn.textContent='Ingresar';btn.disabled=false;
+    usrEl.focus();
   }
 }
 
 async function doSetup(){
+  var usrEl=document.getElementById('usr-new');
   var p1=document.getElementById('pwd-new');
   var p2=document.getElementById('pwd-confirm');
   var err=document.getElementById('setup-err');
   var btn=document.getElementById('btn-setup');
   err.textContent='';
-  p1.classList.remove('error');p2.classList.remove('error');
+  usrEl.classList.remove('error');p1.classList.remove('error');p2.classList.remove('error');
+  if(!usrEl.value.trim()){err.textContent='El usuario no puede estar vacío';usrEl.classList.add('error');usrEl.focus();return;}
   if(p1.value.length<6){err.textContent='La contraseña debe tener al menos 6 caracteres';p1.classList.add('error');p1.focus();return;}
   if(p1.value!==p2.value){err.textContent='Las contraseñas no coinciden';p2.classList.add('error');p2.focus();return;}
   btn.textContent='Guardando...';btn.disabled=true;
-  var hash=await sha256(p1.value);
-  localStorage.setItem('IAF_PWD_HASH',hash);
+  var usrHash=await sha256(usrEl.value.trim().toLowerCase());
+  var pwdHash=await sha256(p1.value);
+  localStorage.setItem('IAF_USR_HASH',usrHash);
+  localStorage.setItem('IAF_PWD_HASH',pwdHash);
   sessionStorage.setItem('IAF_UNLOCKED','1');
   btn.textContent='✓ Listo';
   setTimeout(function(){window.location.href='iaf_analytics.html';},400);

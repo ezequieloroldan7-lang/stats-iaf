@@ -1161,47 +1161,47 @@ async function sha256(text){
 }
 
 function showLock(){
-  var hasHash=!!localStorage.getItem('IAF_PWD_HASH');
   var overlay=document.createElement('div');
   overlay.id='lock-overlay';
-  overlay.style.cssText='position:fixed;inset:0;background:#1a1d24;z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1d24;z-index:9999;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML='<div style="background:#fff;border-radius:16px;padding:36px 32px;width:360px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.4);text-align:center;">'
     +'<div style="font-size:28px;font-weight:900;color:#ba0170;letter-spacing:-1px;margin-bottom:4px;">M·C·A</div>'
     +'<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8b93a8;margin-bottom:24px;">Instituto Alexander Fleming</div>'
-    +'<div style="font-size:14px;font-weight:700;color:#1a1d24;margin-bottom:6px;">'+(hasHash?'Ingresá tu contraseña':'Creá una contraseña de acceso')+'</div>'
-    +(hasHash?'':'<div style="font-size:11px;color:#8b93a8;margin-bottom:16px;">Solo vos vas a poder acceder al admin.</div>')
-    +'<input id="pwd-input" type="password" placeholder="Contraseña" autocomplete="current-password" style="width:100%;font-family:inherit;font-size:14px;font-weight:600;border:1px solid #d0d4dc;border-radius:8px;padding:11px 14px;margin-bottom:'+(hasHash?'8':'12')+'px;text-align:center;">'
-    +(hasHash?'<div id="pwd-error" style="font-size:11px;color:#ca8a04;min-height:18px;margin-bottom:8px;"></div>':'')
-    +'<button id="pwd-btn" onclick="submitPassword()" style="width:100%;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:8px;padding:12px;cursor:pointer;background:#ba0170;color:#fff;">'+(hasHash?'Entrar':'Crear contraseña')+'</button>'
+    +'<div style="font-size:14px;font-weight:700;color:#1a1d24;margin-bottom:16px;">Acceso al Admin</div>'
+    +'<input id="lock-usr" type="text" autocomplete="username" placeholder="Usuario" style="width:100%;font-family:inherit;font-size:14px;font-weight:600;border:1.5px solid #e2e5ea;border-radius:8px;padding:11px 14px;margin-bottom:10px;background:#f4f5f7;">'
+    +'<input id="lock-pwd" type="password" autocomplete="current-password" placeholder="Contraseña" style="width:100%;font-family:inherit;font-size:14px;font-weight:600;border:1.5px solid #e2e5ea;border-radius:8px;padding:11px 14px;margin-bottom:8px;background:#f4f5f7;">'
+    +'<div id="lock-err" style="font-size:11px;color:#ca8a04;min-height:18px;margin-bottom:10px;"></div>'
+    +'<button id="lock-btn" onclick="submitPassword()" style="width:100%;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:8px;padding:13px;cursor:pointer;background:#ba0170;color:#fff;">Entrar</button>'
+    +'<div style="margin-top:14px;"><a href="index.html" style="font-size:10px;color:#8b93a8;text-decoration:none;">← Volver al inicio</a></div>'
     +'</div>';
   document.body.appendChild(overlay);
-  document.getElementById('pwd-input').focus();
-  document.getElementById('pwd-input').addEventListener('keydown',function(e){if(e.key==='Enter')submitPassword();});
+  var usr=document.getElementById('lock-usr');
+  var pwd=document.getElementById('lock-pwd');
+  if(usr)usr.focus();
+  if(pwd)pwd.addEventListener('keydown',function(e){if(e.key==='Enter')submitPassword();});
 }
 
 async function submitPassword(){
-  var input=document.getElementById('pwd-input');
-  var btn=document.getElementById('pwd-btn');
-  var val=input.value;
-  if(!val){input.style.borderColor='#ca8a04';return;}
+  var usrEl=document.getElementById('lock-usr');
+  var pwdEl=document.getElementById('lock-pwd');
+  var btn=document.getElementById('lock-btn');
+  var err=document.getElementById('lock-err');
+  if(!usrEl.value||!pwdEl.value){
+    if(!usrEl.value)usrEl.style.borderColor='#ca8a04';
+    if(!pwdEl.value)pwdEl.style.borderColor='#ca8a04';
+    return;
+  }
   btn.textContent='...';btn.disabled=true;
-  var hash=await sha256(val);
-  var storedHash=localStorage.getItem('IAF_PWD_HASH');
-  if(!storedHash){
-    // Primera vez: guardar hash
-    localStorage.setItem('IAF_PWD_HASH',hash);
-    sessionStorage.setItem('IAF_UNLOCKED','1');
-    document.getElementById('lock-overlay').remove();
-    initApp();
-  } else if(hash===storedHash){
+  var usrHash=await sha256(usrEl.value.trim().toLowerCase());
+  var pwdHash=await sha256(pwdEl.value);
+  if(usrHash===localStorage.getItem('IAF_USR_HASH')&&pwdHash===localStorage.getItem('IAF_PWD_HASH')){
     sessionStorage.setItem('IAF_UNLOCKED','1');
     document.getElementById('lock-overlay').remove();
     initApp();
   } else {
-    var err=document.getElementById('pwd-error');
-    if(err)err.textContent='Contraseña incorrecta';
-    input.style.borderColor='#ca8a04';
-    input.value='';input.focus();
+    err.textContent='Usuario o contraseña incorrectos';
+    pwdEl.style.borderColor='#ca8a04';
+    pwdEl.value='';usrEl.focus();
     btn.textContent='Entrar';btn.disabled=false;
   }
 }
