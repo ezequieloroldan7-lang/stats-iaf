@@ -1,0 +1,8 @@
+name = "iaf-api"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "iaf-stats"
+database_id = "76081051-3837-43b8-8354-cb90b601bf9c"

@@ -128,6 +128,7 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height
     </div>
   </div>
   <div class="header-right">
+    <span id="api-status" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;letter-spacing:.5px;cursor:pointer;" onclick="showApiConfig()" title="Clic para configurar URL de la API">⚙ API no config.</span>
     <span class="badge-count" id="month-count">0 meses</span>
     <a href="iaf_analytics.html" class="btn-dashboard">📊 Ver Dashboard</a>
   </div>
@@ -523,8 +524,33 @@ var DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
 /* ══════════ STATE ══════════ */
 var currentKey='';
+var API_URL=''; // se carga desde localStorage 'IAF_API_URL'
 
-/* ══════════ localStorage ══════════ */
+/* ══════════ API URL config ══════════ */
+function getApiUrl(){return localStorage.getItem('IAF_API_URL')||'';}
+function setApiUrl(url){localStorage.setItem('IAF_API_URL',url.trim().replace(/\/$/,''));}
+
+/* ══════════ API helpers ══════════ */
+async function apiGet(path){
+  var url=getApiUrl();
+  var r=await fetch(url+path);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+async function apiPut(path,data){
+  var url=getApiUrl();
+  var r=await fetch(url+path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+async function apiDelete(path){
+  var url=getApiUrl();
+  var r=await fetch(url+path,{method:'DELETE'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+/* ══════════ Fallback localStorage (cuando API no está config) ══════════ */
 function loadAllData(){
   try{return JSON.parse(localStorage.getItem('IAF_DATA')||'{"months":{}}');}
   catch(e){return {months:{}};}
@@ -872,27 +898,65 @@ function collectForm(){
 }
 
 /* ══════════ DROPDOWN ══════════ */
-function buildDropdown(){
+async function buildDropdown(){
   var sel=document.getElementById('monthSelect');
+  var count=document.getElementById('month-count');
+  var apiUrl=getApiUrl();
+  var keys=[];
+
+  if(apiUrl){
+    try{
+      var rows=await apiGet('/months');
+      sel.innerHTML='<option value="">— Seleccionar mes —</option>';
+      rows.forEach(function(r){
+        var opt=document.createElement('option');
+        opt.value=r.key;
+        opt.textContent=r.label||r.key;
+        if(r.key===currentKey)opt.selected=true;
+        sel.appendChild(opt);
+      });
+      keys=rows.map(function(r){return r.key;});
+    }catch(err){
+      showToast('Error conectando a la API: '+err.message,'#ca8a04');
+      useFallbackDropdown(sel);
+      keys=Object.keys(loadAllData().months||{});
+    }
+  } else {
+    useFallbackDropdown(sel);
+    keys=Object.keys(loadAllData().months||{});
+  }
+
+  if(count)count.textContent=keys.length+' '+(keys.length===1?'mes':'meses');
+  updateApiStatus();
+}
+
+function useFallbackDropdown(sel){
   var stored=loadAllData().months||{};
-  var keys=Object.keys(stored);
   sel.innerHTML='<option value="">— Seleccionar mes —</option>';
-  keys.forEach(function(k){
+  Object.keys(stored).forEach(function(k){
     var m=stored[k];
     var opt=document.createElement('option');
-    opt.value=k;
-    opt.textContent=(m.label||k);
+    opt.value=k;opt.textContent=m.label||k;
     if(k===currentKey)opt.selected=true;
     sel.appendChild(opt);
   });
-  var count=document.getElementById('month-count');
-  if(count)count.textContent=keys.length+' '+(keys.length===1?'mes':'meses');
 }
 
 /* ══════════ LOAD MONTH ══════════ */
-function loadMonth(key){
+async function loadMonth(key){
   if(!key){currentKey='';fillForm(emptyMonth());return;}
   currentKey=key;
+  var apiUrl=getApiUrl();
+  if(apiUrl){
+    try{
+      var data=await apiGet('/months/'+encodeURIComponent(key));
+      fillForm(data);
+      return;
+    }catch(err){
+      showToast('Error cargando mes: '+err.message,'#ca8a04');
+    }
+  }
+  // fallback localStorage
   var stored=loadAllData().months||{};
   fillForm(stored[key]||emptyMonth());
 }
@@ -907,7 +971,7 @@ function newMonth(){
 }
 
 /* ══════════ SAVE ══════════ */
-function saveCurrent(){
+async function saveCurrent(){
   var d=collectForm();
   if(!d.label){
     document.getElementById('f-label').classList.add('error');
@@ -918,34 +982,74 @@ function saveCurrent(){
   document.getElementById('f-label').classList.remove('error');
   var key=currentKey||labelToKey(d.label);
   currentKey=key;
+  var apiUrl=getApiUrl();
+
+  if(apiUrl){
+    try{
+      await apiPut('/months/'+encodeURIComponent(key),d);
+      await buildDropdown();
+      document.getElementById('monthSelect').value=key;
+      showToast('✓ Guardado en DB: '+d.label,'#0d7a4e');
+      return;
+    }catch(err){
+      showToast('Error guardando en API: '+err.message+' — guardado local','#ca8a04');
+    }
+  }
+  // fallback localStorage
   var allData=loadAllData();
   allData.months=allData.months||{};
   allData.months[key]=d;
   saveAllData(allData);
   buildDropdown();
   document.getElementById('monthSelect').value=key;
-  showToast('✓ Guardado: '+d.label,'#0d7a4e');
+  showToast('✓ Guardado localmente: '+d.label,'#5b4fcf');
 }
 
 /* ══════════ DELETE ══════════ */
-function deleteMonth(){
+async function deleteMonth(){
   if(!currentKey){showToast('Seleccioná un mes primero','#ca8a04');return;}
-  var allData=loadAllData();
-  var label=(allData.months&&allData.months[currentKey])?allData.months[currentKey].label:currentKey;
+  var label=fv('f-label')||currentKey;
   if(!confirm('¿Eliminar '+label+'? Esta acción no se puede deshacer.'))return;
-  delete allData.months[currentKey];
-  saveAllData(allData);
+  var apiUrl=getApiUrl();
+  if(apiUrl){
+    try{
+      await apiDelete('/months/'+encodeURIComponent(currentKey));
+    }catch(err){
+      showToast('Error eliminando en API: '+err.message,'#ca8a04');
+    }
+  } else {
+    var allData=loadAllData();
+    delete allData.months[currentKey];
+    saveAllData(allData);
+  }
   currentKey='';
-  buildDropdown();
+  await buildDropdown();
   fillForm(emptyMonth());
   document.getElementById('monthSelect').value='';
   showToast('Mes eliminado','#ca8a04');
 }
 
 /* ══════════ EXPORT JSON ══════════ */
-function exportJSON(){
-  var allData=loadAllData();
-  var json=JSON.stringify(allData,null,2);
+async function exportJSON(){
+  var data;
+  var apiUrl=getApiUrl();
+  if(apiUrl){
+    try{
+      var rows=await apiGet('/months');
+      var months={};
+      for(var i=0;i<rows.length;i++){
+        var m=await apiGet('/months/'+encodeURIComponent(rows[i].key));
+        months[rows[i].key]=m;
+      }
+      data={months:months};
+    }catch(err){
+      showToast('Error exportando desde API','#ca8a04');
+      data=loadAllData();
+    }
+  } else {
+    data=loadAllData();
+  }
+  var json=JSON.stringify(data,null,2);
   var blob=new Blob([json],{type:'application/json'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
@@ -960,17 +1064,24 @@ function importJSON(event){
   var file=event.target.files[0];
   if(!file)return;
   var reader=new FileReader();
-  reader.onload=function(e){
+  reader.onload=async function(e){
     try{
       var imported=JSON.parse(e.target.result);
       if(!imported.months)throw new Error('Formato inválido');
-      var existing=loadAllData();
-      var merged=existing.months||{};
-      for(var k in imported.months){merged[k]=imported.months[k];}
-      existing.months=merged;
-      saveAllData(existing);
-      buildDropdown();
-      showToast('✓ '+Object.keys(imported.months).length+' meses importados','#0d7a4e');
+      var keys=Object.keys(imported.months);
+      var apiUrl=getApiUrl();
+      if(apiUrl){
+        for(var i=0;i<keys.length;i++){
+          var k=keys[i];
+          await apiPut('/months/'+encodeURIComponent(k),imported.months[k]);
+        }
+      } else {
+        var existing=loadAllData();
+        for(var k in imported.months){existing.months[k]=imported.months[k];}
+        saveAllData(existing);
+      }
+      await buildDropdown();
+      showToast('✓ '+keys.length+' meses importados','#0d7a4e');
     }catch(err){
       showToast('Error al importar: '+err.message,'#ca8a04');
     }
@@ -999,11 +1110,58 @@ function showToast(msg,color){
   setTimeout(function(){t.classList.remove('show');},2500);
 }
 
+/* ══════════ API STATUS ══════════ */
+function updateApiStatus(){
+  var el=document.getElementById('api-status');
+  if(!el)return;
+  var url=getApiUrl();
+  if(url){
+    el.textContent='🟢 API conectada';
+    el.style.background='#eaf7f2';el.style.color='#0d7a4e';
+  } else {
+    el.textContent='⚙ API no config.';
+    el.style.background='#fefce8';el.style.color='#ca8a04';
+  }
+}
+
+/* ══════════ API CONFIG MODAL ══════════ */
+function showApiConfig(){
+  var current=getApiUrl();
+  var modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML='<div style="background:#fff;border-radius:12px;padding:28px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);">'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:6px;">Configurar URL de la API</div>'
+    +'<div style="font-size:11px;color:#8b93a8;margin-bottom:18px;line-height:1.6;">Pegá la URL del Worker desplegado en Cloudflare.<br>Ejemplo: <code style="background:#f4f5f7;padding:2px 5px;border-radius:4px;">https://iaf-api.miusuario.workers.dev</code></div>'
+    +'<input id="api-url-input" type="url" value="'+current+'" placeholder="https://iaf-api.xxxxx.workers.dev" style="width:100%;font-family:inherit;font-size:13px;font-weight:600;border:1px solid #d0d4dc;border-radius:6px;padding:10px 12px;margin-bottom:16px;">'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    +'<button onclick="this.closest(\'div[style*=inset]\').remove()" style="font-family:inherit;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #d0d4dc;border-radius:6px;padding:8px 14px;cursor:pointer;background:#fff;">Cancelar</button>'
+    +'<button onclick="saveApiConfig()" style="font-family:inherit;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;background:#ba0170;color:#fff;">Guardar</button>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+  document.getElementById('api-url-input').select();
+}
+
+function saveApiConfig(){
+  var input=document.getElementById('api-url-input');
+  if(!input)return;
+  setApiUrl(input.value);
+  document.querySelector('div[style*="inset:0"]').remove();
+  updateApiStatus();
+  buildDropdown();
+  showToast('URL de API guardada','#0d7a4e');
+}
+
 /* ══════════ INIT ══════════ */
 window.addEventListener('load',function(){
   buildDiasTable();
   buildDropdown();
   fillForm(emptyMonth());
+  // Mostrar config modal si no hay API configurada
+  if(!getApiUrl()){
+    setTimeout(function(){
+      if(!getApiUrl())showApiConfig();
+    },800);
+  }
 });
 </script>
 </body>

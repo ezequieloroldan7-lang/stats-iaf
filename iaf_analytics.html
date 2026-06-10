@@ -619,19 +619,34 @@ const MONTHS={
   }
 };
 
-/* ── MERGE localStorage months ── */
+/* ── MERGE localStorage months (fallback) ── */
 (function(){
   try{
     var raw=localStorage.getItem('IAF_DATA');
     if(!raw)return;
     var stored=JSON.parse(raw);
     if(stored&&stored.months){
-      for(var k in stored.months){
-        MONTHS[k]=stored.months[k];
-      }
+      for(var k in stored.months){MONTHS[k]=stored.months[k];}
     }
   }catch(e){}
 })();
+
+/* ── LOAD months from API (si está configurada) ── */
+async function loadMonthsFromApi(){
+  var apiUrl=(localStorage.getItem('IAF_API_URL')||'').replace(/\/$/,'');
+  if(!apiUrl)return;
+  try{
+    var rows=await fetch(apiUrl+'/months').then(function(r){return r.json();});
+    for(var i=0;i<rows.length;i++){
+      var key=rows[i].key;
+      if(!MONTHS[key]){
+        var data=await fetch(apiUrl+'/months/'+encodeURIComponent(key)).then(function(r){return r.json();});
+        MONTHS[key]=data;
+      }
+    }
+    buildMonthBar();
+  }catch(e){}
+}
 
 /* ── Build month bar dynamically ── */
 function buildMonthBar(){
@@ -2717,6 +2732,7 @@ window.addEventListener('load',function(){
   buildMonthBar();
   document.querySelector('.section-bar').style.display='none';
   renderSection('resumenAnual',Object.keys(MONTHS)[0]||'ene2026');
+  loadMonthsFromApi();
 });
 </script>
 </body>
