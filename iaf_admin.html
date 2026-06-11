@@ -110,8 +110,8 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height
 .suggest-panel{margin-top:6px;background:#fdf0f7;border:1px solid rgba(186,1,112,.18);border-radius:6px;padding:8px 10px;}
 .suggest-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px;flex-wrap:wrap;}
 .suggest-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#ba0170;}
-.suggest-search{font-family:var(--font);font-size:11px;font-weight:600;color:var(--text-1);border:1px solid rgba(186,1,112,.3);border-radius:100px;padding:3px 10px 3px 26px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ba0170' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 8px center;width:160px;transition:border .15s;}
-.suggest-search:focus{outline:none;border-color:#ba0170;box-shadow:0 0 0 2px rgba(186,1,112,.1);width:220px;}
+.suggest-search{font-family:var(--font);font-size:11px;font-weight:600;color:var(--text-1);border:1px solid rgba(186,1,112,.3);border-radius:100px;padding:3px 10px 3px 26px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ba0170' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 8px center;width:180px;transition:border .15s;}
+.suggest-search:focus{outline:none;border-color:#ba0170;box-shadow:0 0 0 2px rgba(186,1,112,.1);}
 .suggest-chips{display:flex;flex-wrap:wrap;gap:4px;max-height:96px;overflow-y:auto;}
 .suggest-chips::-webkit-scrollbar{width:4px;height:4px;}
 .suggest-chips::-webkit-scrollbar-thumb{background:rgba(186,1,112,.25);border-radius:2px;}
@@ -840,7 +840,7 @@ function buildAllSuggestions(){
     panel.className='suggest-panel';
     var chips=names.map(function(name){
       var safe=name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return '<button type="button" class="suggest-chip" title="'+name.replace(/"/g,'&quot;')+'" onclick="addSuggestLine(\''+cfg.id+'\',\''+safe+'\')">'+name+'</button>';
+      return '<button type="button" class="suggest-chip" title="'+name.replace(/"/g,'&quot;')+'" onmousedown="event.preventDefault();addSuggestLine(\''+cfg.id+'\',\''+safe+'\')">'+name+'</button>';
     }).join('');
     panel.innerHTML='<div class="suggest-header">'
       +'<span class="suggest-label">Conocidos</span>'
