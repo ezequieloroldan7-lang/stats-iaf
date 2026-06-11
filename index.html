@@ -141,15 +141,7 @@ function init(){
   }
 }
 
-async function checkCredentials(usrNorm, pwd){
-  var usrHash=await sha256(usrNorm);
-  var pwdHash=await sha256(pwd);
-  // Primary user
-  if(usrHash===localStorage.getItem('IAF_USR_HASH')&&pwdHash===localStorage.getItem('IAF_PWD_HASH'))return true;
-  // Additional users granted by eroldan
-  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
-  return extra.some(function(u){return u.usrHash===usrHash&&u.pwdHash===pwdHash;});
-}
+function getApiUrl(){return(localStorage.getItem('IAF_API_URL')||'').replace(/\/$/,'');}
 
 async function doLogin(){
   var usrEl=document.getElementById('usr');
@@ -164,18 +156,43 @@ async function doLogin(){
   }
   btn.textContent='Verificando...';btn.disabled=true;
   var usrNorm=usrEl.value.trim().toLowerCase();
-  if(await checkCredentials(usrNorm, pwdEl.value)){
+  var usrHash=await sha256(usrNorm);
+  var pwdHash=await sha256(pwdEl.value);
+
+  // 1. Try D1 via /auth (primary path)
+  var apiUrl=getApiUrl();
+  if(apiUrl){
+    try{
+      var res=await fetch(apiUrl+'/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usrHash:usrHash,pwdHash:pwdHash})});
+      var data=await res.json();
+      if(data.valid){
+        sessionStorage.setItem('IAF_UNLOCKED','1');
+        sessionStorage.setItem('IAF_CURRENT_USR',data.label||usrNorm);
+        if(data.isAdmin){sessionStorage.setItem('IAF_IS_ADMIN','1');sessionStorage.setItem('IAF_SH_U',usrHash);sessionStorage.setItem('IAF_SH_P',pwdHash);}
+        btn.textContent='✓ Acceso concedido';
+        setTimeout(function(){window.location.href='iaf_analytics.html';},400);
+        return;
+      }
+    }catch(e){}
+  }
+
+  // 2. Fallback: localStorage (eroldan only — admin access)
+  if(usrHash===localStorage.getItem('IAF_USR_HASH')&&pwdHash===localStorage.getItem('IAF_PWD_HASH')){
     sessionStorage.setItem('IAF_UNLOCKED','1');
     sessionStorage.setItem('IAF_CURRENT_USR',usrNorm);
+    sessionStorage.setItem('IAF_IS_ADMIN','1');
+    sessionStorage.setItem('IAF_SH_U',usrHash);
+    sessionStorage.setItem('IAF_SH_P',pwdHash);
     btn.textContent='✓ Acceso concedido';
     setTimeout(function(){window.location.href='iaf_analytics.html';},400);
-  } else {
-    err.textContent='Usuario o contraseña incorrectos';
-    usrEl.classList.add('error');pwdEl.classList.add('error');
-    pwdEl.value='';
-    btn.textContent='Ingresar';btn.disabled=false;
-    usrEl.focus();
+    return;
   }
+
+  err.textContent='Usuario o contraseña incorrectos';
+  usrEl.classList.add('error');pwdEl.classList.add('error');
+  pwdEl.value='';
+  btn.textContent='Ingresar';btn.disabled=false;
+  usrEl.focus();
 }
 
 async function doSetup(){
@@ -194,10 +211,25 @@ async function doSetup(){
   btn.textContent='Guardando...';btn.disabled=true;
   var usrHash=await sha256(usrNorm);
   var pwdHash=await sha256(p1.value);
+  // Always store in localStorage as fallback
   localStorage.setItem('IAF_USR_HASH',usrHash);
   localStorage.setItem('IAF_PWD_HASH',pwdHash);
+  // Register in D1 if API is configured
+  var apiUrl=getApiUrl();
+  if(apiUrl){
+    try{
+      await fetch(apiUrl+'/users',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Admin-Usr':usrHash,'X-Admin-Pwd':pwdHash},
+        body:JSON.stringify({usrHash:usrHash,pwdHash:pwdHash,label:'eroldan',isAdmin:true})
+      });
+    }catch(e){}
+  }
   sessionStorage.setItem('IAF_UNLOCKED','1');
   sessionStorage.setItem('IAF_CURRENT_USR','eroldan');
+  sessionStorage.setItem('IAF_IS_ADMIN','1');
+  sessionStorage.setItem('IAF_SH_U',usrHash);
+  sessionStorage.setItem('IAF_SH_P',pwdHash);
   btn.textContent='✓ Listo';
   setTimeout(function(){window.location.href='iaf_analytics.html';},400);
 }

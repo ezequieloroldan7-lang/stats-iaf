@@ -1412,16 +1412,30 @@ async function submitPassword(){
   var usrNorm=usrEl.value.trim().toLowerCase();
   var usrHash=await sha256(usrNorm);
   var pwdHash=await sha256(pwdEl.value);
-  var primary=usrHash===localStorage.getItem('IAF_USR_HASH')&&pwdHash===localStorage.getItem('IAF_PWD_HASH');
-  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
-  var matched=primary||extra.some(function(u){return u.usrHash===usrHash&&u.pwdHash===pwdHash;});
+  var matched=false;
+  // Try D1 /auth first
+  var apiUrl=(localStorage.getItem('IAF_API_URL')||'').replace(/\/$/,'');
+  if(apiUrl){
+    try{
+      var res=await fetch(apiUrl+'/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usrHash:usrHash,pwdHash:pwdHash})});
+      var data=await res.json();
+      if(data.valid&&data.isAdmin){matched=true;}
+    }catch(e){}
+  }
+  // Fallback: localStorage (eroldan)
+  if(!matched&&usrHash===localStorage.getItem('IAF_USR_HASH')&&pwdHash===localStorage.getItem('IAF_PWD_HASH')){
+    matched=true;
+  }
   if(matched){
     sessionStorage.setItem('IAF_UNLOCKED','1');
+    sessionStorage.setItem('IAF_IS_ADMIN','1');
     sessionStorage.setItem('IAF_CURRENT_USR',usrNorm);
+    sessionStorage.setItem('IAF_SH_U',usrHash);
+    sessionStorage.setItem('IAF_SH_P',pwdHash);
     document.getElementById('lock-overlay').remove();
     initApp();
   } else {
-    err.textContent='Usuario o contraseña incorrectos';
+    err.textContent='Acceso denegado — solo administradores';
     pwdEl.style.borderColor='#ca8a04';
     pwdEl.value='';usrEl.focus();
     btn.textContent='Entrar';btn.disabled=false;
@@ -1442,14 +1456,21 @@ function initApp(){
   if(!getApiUrl()){
     setTimeout(function(){if(!getApiUrl())showApiConfig();},800);
   }
-  // Show users button only for eroldan
-  if(sessionStorage.getItem('IAF_CURRENT_USR')==='eroldan'){
+  if(sessionStorage.getItem('IAF_IS_ADMIN')==='1'){
     var btn=document.getElementById('btn-users');
     if(btn)btn.style.display='';
   }
 }
 
-/* ══════════ USER MANAGEMENT (eroldan only) ══════════ */
+/* ══════════ USER MANAGEMENT (admin only) ══════════ */
+function adminHeaders(){
+  return{
+    'Content-Type':'application/json',
+    'X-Admin-Usr':sessionStorage.getItem('IAF_SH_U')||'',
+    'X-Admin-Pwd':sessionStorage.getItem('IAF_SH_P')||''
+  };
+}
+
 function toggleUsersPanel(){
   var panel=document.getElementById('users-panel');
   if(!panel)return;
@@ -1458,20 +1479,29 @@ function toggleUsersPanel(){
   if(!visible)renderUsersList();
 }
 
-function renderUsersList(){
+async function renderUsersList(){
   var list=document.getElementById('users-list');
   if(!list)return;
-  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
-  if(!extra.length){
-    list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);font-style:italic;">Solo eroldan (usuario principal)</div>';
-    return;
+  var apiUrl=getApiUrl();
+  if(!apiUrl){list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);font-style:italic;">API no configurada.</div>';return;}
+  list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);">Cargando...</div>';
+  try{
+    var res=await fetch(apiUrl+'/users',{headers:adminHeaders()});
+    var users=await res.json();
+    if(!Array.isArray(users)||!users.length){
+      list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);font-style:italic;">Sin usuarios adicionales.</div>';
+      return;
+    }
+    list.innerHTML=users.filter(function(u){return!u.is_admin;}).map(function(u){
+      return'<div style="display:flex;align-items:center;gap:8px;">'+
+        '<span style="font-size:12px;font-weight:700;color:#fff;flex:1;">'+u.label+'</span>'+
+        '<button onclick="removeUser(\''+encodeURIComponent(u.usr_hash)+'\')" style="font-family:inherit;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;background:rgba(202,138,4,.25);color:#ca8a04;">Eliminar</button>'+
+      '</div>';
+    }).join('');
+    if(!list.innerHTML)list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);font-style:italic;">Sin usuarios adicionales.</div>';
+  }catch(e){
+    list.innerHTML='<div style="font-size:11px;color:#ca8a04;">Error al cargar usuarios.</div>';
   }
-  list.innerHTML=extra.map(function(u,i){
-    return'<div style="display:flex;align-items:center;gap:8px;">'+
-      '<span style="font-size:12px;font-weight:700;color:#fff;flex:1;">'+u.label+'</span>'+
-      '<button onclick="removeUser('+i+')" style="font-family:inherit;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;background:rgba(202,138,4,.25);color:#ca8a04;">Eliminar</button>'+
-    '</div>';
-  }).join('');
 }
 
 async function addUser(){
@@ -1483,23 +1513,40 @@ async function addUser(){
   if(!usrNorm){errEl.textContent='Ingresá un nombre de usuario.';return;}
   if(usrNorm==='eroldan'){errEl.textContent='eroldan es el usuario principal.';return;}
   if((pwdEl.value||'').length<6){errEl.textContent='La contraseña debe tener al menos 6 caracteres.';return;}
-  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
+  var apiUrl=getApiUrl();
+  if(!apiUrl){errEl.textContent='API no configurada.';return;}
   var usrHash=await sha256(usrNorm);
-  if(extra.some(function(u){return u.usrHash===usrHash;})){errEl.textContent='Ese usuario ya existe.';return;}
   var pwdHash=await sha256(pwdEl.value);
-  extra.push({usrHash:usrHash,pwdHash:pwdHash,label:usrNorm});
-  localStorage.setItem('IAF_USERS',JSON.stringify(extra));
-  usrEl.value='';pwdEl.value='';
-  renderUsersList();
-  showToast('Usuario '+usrNorm+' agregado','#0d7a4e');
+  try{
+    var res=await fetch(apiUrl+'/users',{
+      method:'POST',
+      headers:adminHeaders(),
+      body:JSON.stringify({usrHash:usrHash,pwdHash:pwdHash,label:usrNorm,isAdmin:false})
+    });
+    var data=await res.json();
+    if(data.ok){
+      usrEl.value='';pwdEl.value='';
+      renderUsersList();
+      showToast('Usuario '+usrNorm+' agregado','#0d7a4e');
+    } else {
+      errEl.textContent=(data.error||'Error al agregar usuario.');
+    }
+  }catch(e){
+    errEl.textContent='Error de red al agregar usuario.';
+  }
 }
 
-function removeUser(idx){
-  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
-  var removed=extra.splice(idx,1);
-  localStorage.setItem('IAF_USERS',JSON.stringify(extra));
-  renderUsersList();
-  if(removed.length)showToast('Usuario '+removed[0].label+' eliminado','#ca8a04');
+async function removeUser(encodedHash){
+  var apiUrl=getApiUrl();
+  if(!apiUrl)return;
+  try{
+    var res=await fetch(apiUrl+'/users/'+encodedHash,{method:'DELETE',headers:adminHeaders()});
+    var data=await res.json();
+    if(data.ok){
+      renderUsersList();
+      showToast('Usuario eliminado','#ca8a04');
+    }
+  }catch(e){}
 }
 
 window.addEventListener('load',function(){
