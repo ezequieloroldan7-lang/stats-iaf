@@ -672,9 +672,8 @@ async function loadMonthsFromApi(){
     Object.keys(MONTHS).forEach(function(k){
       if(!HARDCODED_KEYS[k]&&!apiKeys[k]){delete MONTHS[k];changed=true;}
     });
-    if(changed)buildMonthBar();
-    // Always rebuild bar in case new month appeared
     buildMonthBar();
+    if(changed)renderSection(currentSection,currentMonth);
   }catch(e){}
 }
 
@@ -2783,6 +2782,7 @@ function showLock(){
 async function submitPassword(){}
 
 function initAnalytics(){
+  currentSection='resumenAnual';
   buildMonthBar();
   document.querySelector('.section-bar').style.display='none';
   renderSection('resumenAnual',Object.keys(MONTHS)[0]||'ene2026');
@@ -2791,6 +2791,9 @@ function initAnalytics(){
 
 document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='visible'){loadMonthsFromApi();}
+});
+window.addEventListener('pageshow',function(e){
+  if(e.persisted){loadMonthsFromApi();}
 });
 
 </script>
