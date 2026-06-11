@@ -294,7 +294,7 @@ canvas{max-height:260px;}
   <div class="section-tab" onclick="switchSection('cancelaciones',this)">Cancelaciones</div>
   <div class="section-tab" onclick="switchSection('estimaciones',this)">Estimaciones</div>
   <div class="section-tab" onclick="switchSection('calidad',this)">Calidad</div>
-  <div class="section-tab" onclick="switchSection('cirujanos',this)">Cirujanos</div>
+  <div class="section-tab" onclick="switchCirujanos(this)">Cirujanos</div>
 </div>
 
 <div class="trimestre-bar">
@@ -2663,6 +2663,98 @@ function buildCirujanos(d){
   crossSection;
 }
 
+function buildCirujanosAnual(){
+  var meses=Object.values(MONTHS);
+  var allKeys=Object.keys(MONTHS);
+  var shortL=meses.map(function(m){return m.label.split(' ')[0];});
+
+  // Aggregate surgeon data across all months
+  var map={};
+  function merge(rawName){
+    var key=nameKey(rawName);
+    if(!map[key]){map[key]={name:rawName,key:key,cirMeses:{},cancelaMeses:{},atrasoMeses:{},estimMeses:{}};}
+    else if(rawName.replace(/\./g,'').length>map[key].name.replace(/\./g,'').length){map[key].name=rawName;}
+    return map[key];
+  }
+  meses.forEach(function(mes,mi){
+    var mk=allKeys[mi];
+    if(mes.cirujanos)mes.cirujanos.forEach(function(r){merge(r[0]).cirMeses[mk]=r[1];});
+    if(mes.cancelaCirujanos)mes.cancelaCirujanos.forEach(function(r){merge(r[0]).cancelaMeses[mk]={count:r[2],pct:parseInt(r[3])};});
+    if(mes.atrasosCirujanos)mes.atrasosCirujanos.forEach(function(r){merge(r[0]).atrasoMeses[mk]={min:r[3],pct:r[2]};});
+    if(mes.estimCirujanos)mes.estimCirujanos.forEach(function(r){merge(r[0]).estimMeses[mk]=r[3];});
+  });
+
+  var surgeons=Object.values(map).filter(function(s){return Object.keys(s.cirMeses).length>0;});
+  surgeons.sort(function(a,b){
+    var ta=Object.values(a.cirMeses).reduce(function(s,v){return s+v;},0);
+    var tb=Object.values(b.cirMeses).reduce(function(s,v){return s+v;},0);
+    return tb-ta;
+  });
+
+  function kColor(kpiKey,v){var t=THRESHOLDS[kpiKey];if(!t)return'#4a5068';return t.higherBetter?(v<t.bad?C.brand:v<t.warn?C.warn:C.good):(v>t.bad?C.brand:v>t.warn?C.warn:C.good);}
+  var dash='<td style="text-align:center;color:#c7ccd8">—</td>';
+  var mHeads=shortL.map(function(l){return'<th style="text-align:center">'+l+'</th>';}).join('');
+
+  var rows=surgeons.map(function(s){
+    var totalCx=Object.values(s.cirMeses).reduce(function(sum,v){return sum+v;},0);
+    var meses2=Object.keys(s.cirMeses).length;
+    var cancelPcts=Object.values(s.cancelaMeses).map(function(v){return v.pct;});
+    var avgCancel=cancelPcts.length?Math.round(cancelPcts.reduce(function(a,b){return a+b;})/cancelPcts.length):null;
+    var atrasoMins=Object.values(s.atrasoMeses).map(function(v){return v.min;});
+    var avgAtraso=atrasoMins.length?Math.round(atrasoMins.reduce(function(a,b){return a+b;})/atrasoMins.length):null;
+    var totalDesvio=Object.values(s.estimMeses).reduce(function(sum,v){return sum+v;},0);
+    var hasDesvio=Object.keys(s.estimMeses).length>0;
+
+    var cxCells=allKeys.map(function(k){
+      return s.cirMeses[k]!=null?'<td style="text-align:center;font-weight:600">'+s.cirMeses[k]+'</td>':'<td style="text-align:center;color:#c7ccd8">—</td>';
+    }).join('');
+
+    var rCancel=avgCancel!=null?'<td style="text-align:center;font-weight:700;color:'+kColor('cancelacion',avgCancel)+'">'+avgCancel+'% prom.</td>':dash;
+    var rAtraso=avgAtraso!=null?'<td style="text-align:center;font-weight:700;color:'+kColor('atraso',avgAtraso)+'">'+avgAtraso+' min</td>':dash;
+    var rDesvio=hasDesvio?'<td style="text-align:center;font-weight:700;color:#ca8a04">'+Number(totalDesvio).toLocaleString('es-AR')+' min</td>':dash;
+
+    return'<tr>'+
+      '<td class="hl" data-cir="'+s.name.toLowerCase()+'">'+s.name+'</td>'+
+      '<td style="text-align:center;font-weight:800">'+totalCx+'</td>'+
+      '<td style="text-align:center;color:#8b93a8;font-weight:600">'+meses2+' mes'+(meses2!==1?'es':'')+'</td>'+
+      cxCells+rCancel+rAtraso+rDesvio+
+    '</tr>';
+  }).join('');
+
+  var year=meses[0].label.split(' ')[1];
+  return'<div class="section-title">Cirujanos · '+year+'</div>'+
+  '<div class="section-period">Resumen anual · todos los meses cargados</div>'+
+  '<div style="display:flex;align-items:center;gap:12px;margin:16px 0 10px">'+
+    '<input id="cir-search" type="text" placeholder="Buscar cirujano..." oninput="filterCirujanos()"'+
+    ' style="font-family:var(--font);font-size:11px;font-weight:600;border:1px solid rgba(186,1,112,.3);border-radius:100px;padding:5px 14px;width:200px;outline:none;color:var(--text-1);"'+
+    ' onfocus="this.style.borderColor=\'#ba0170\'" onblur="this.style.borderColor=\'rgba(186,1,112,.3)\'">'+
+    '<span id="cir-count" style="font-size:10px;font-weight:700;color:var(--text-3)">'+surgeons.length+' cirujanos</span>'+
+  '</div>'+
+  '<div style="overflow-x:auto">'+
+  '<table class="data-table" id="cir-table">'+
+    '<thead><tr>'+
+      '<th>Cirujano</th>'+
+      '<th style="text-align:center">Total cx</th>'+
+      '<th style="text-align:center">Meses</th>'+
+      mHeads+
+      '<th style="text-align:center">Cancelac. prom.</th>'+
+      '<th style="text-align:center">Atraso prom.</th>'+
+      '<th style="text-align:center">Desvío acum.</th>'+
+    '</tr></thead>'+
+    '<tbody id="cir-body">'+rows+'</tbody>'+
+  '</table></div>';
+}
+
+function switchCirujanos(el){
+  var wasAnual=(currentSection==='resumenAnual');
+  currentSection='cirujanos';
+  document.querySelectorAll('.section-tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  document.querySelectorAll('.trimestre-tab').forEach(function(t){t.classList.remove('active');});
+  var main=document.getElementById('main-content');
+  main.innerHTML=wasAnual?buildCirujanosAnual():buildCirujanos(MONTHS[currentMonth]);
+}
+
 function filterCirujanos(){
   var q=(document.getElementById('cir-search').value||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   var rows=document.querySelectorAll('#cir-body tr');
@@ -2837,7 +2929,7 @@ function switchToAnual(el){
   document.querySelectorAll('.month-tab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
   document.querySelectorAll('.section-tab,.trimestre-tab').forEach(function(t){t.classList.remove('active');});
-  document.querySelector('.section-bar').style.display='none';
+  document.querySelector('.section-bar').style.display='';
   renderSection('resumenAnual',currentMonth);
 }
 
@@ -2931,7 +3023,7 @@ async function submitPassword(){}
 function initAnalytics(){
   currentSection='resumenAnual';
   buildMonthBar();
-  document.querySelector('.section-bar').style.display='none';
+  document.querySelector('.section-bar').style.display='';
   renderSection('resumenAnual',Object.keys(MONTHS)[0]||'ene2026');
   loadMonthsFromApi();
 }
