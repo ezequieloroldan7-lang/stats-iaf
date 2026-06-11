@@ -784,9 +784,22 @@ function addSuggestLine(fieldId,name){
 
 function pct(curr,prev){if(!prev||prev===0)return null;return Math.round((curr-prev)/Math.abs(prev)*1000)/10;}
 
+var _MES={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12};
+function monthSortVal(label){
+  // "Abril 2026" → 202604
+  if(!label)return 0;
+  var p=label.toLowerCase().split(/\s+/);
+  return (parseInt(p[1])||0)*100+(_MES[p[0]]||99);
+}
+function sortedCacheKeys(){
+  return Object.keys(MONTHS_CACHE).sort(function(a,b){
+    return monthSortVal((MONTHS_CACHE[a]||{}).label||a)-monthSortVal((MONTHS_CACHE[b]||{}).label||b);
+  });
+}
+
 function autoCalcDeltas(){
   // Find the most recent OTHER month in cache to compare against
-  var monthKeys=Object.keys(MONTHS_CACHE).filter(function(k){return k!==currentKey;});
+  var monthKeys=sortedCacheKeys().filter(function(k){return k!==currentKey;});
   if(!monthKeys.length){showToast('No hay mes anterior cargado para comparar','#ca8a04');return;}
   var prevKey=monthKeys[monthKeys.length-1];
   var prev=MONTHS_CACHE[prevKey];
@@ -821,7 +834,7 @@ function copyPrevField(fieldId){
   var cfg=null;
   for(var i=0;i<SUGGEST_CONFIG.length;i++){if(SUGGEST_CONFIG[i].id===fieldId){cfg=SUGGEST_CONFIG[i];break;}}
   if(!cfg)return;
-  var monthKeys=Object.keys(MONTHS_CACHE);
+  var monthKeys=sortedCacheKeys();
   var prevKey=null,prevData=null;
   for(var i=0;i<monthKeys.length;i++){
     var k=monthKeys[i];
@@ -1080,6 +1093,7 @@ async function buildDropdown(){
   if(apiUrl){
     try{
       var rows=await apiGet('/months');
+      rows.sort(function(a,b){return monthSortVal(a.label||a.key)-monthSortVal(b.label||b.key);});
       sel.innerHTML='<option value="">— Seleccionar mes —</option>';
       rows.forEach(function(r){
         var opt=document.createElement('option');
@@ -1107,7 +1121,7 @@ async function buildDropdown(){
 function useFallbackDropdown(sel){
   var stored=loadAllData().months||{};
   sel.innerHTML='<option value="">— Seleccionar mes —</option>';
-  Object.keys(stored).forEach(function(k){
+  Object.keys(stored).sort(function(a,b){return monthSortVal((stored[a]||{}).label||a)-monthSortVal((stored[b]||{}).label||b);}).forEach(function(k){
     var m=stored[k];
     var opt=document.createElement('option');
     opt.value=k;opt.textContent=m.label||k;
