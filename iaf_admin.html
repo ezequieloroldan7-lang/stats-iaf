@@ -106,6 +106,16 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height
 /* IMPORT hidden input */
 #import-file{display:none;}
 
+/* SUGGESTION PANELS */
+.suggest-panel{margin-top:6px;background:#fdf0f7;border:1px solid rgba(186,1,112,.18);border-radius:6px;padding:8px 10px;}
+.suggest-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px;flex-wrap:wrap;}
+.suggest-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#ba0170;}
+.suggest-chips{display:flex;flex-wrap:wrap;gap:4px;}
+.suggest-chip{font-family:var(--font);font-size:10px;font-weight:600;color:#ba0170;background:#fff;border:1px solid rgba(186,1,112,.3);border-radius:100px;padding:3px 10px;cursor:pointer;transition:all .1s;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.suggest-chip:hover{background:#ba0170;color:#fff;border-color:#ba0170;}
+.suggest-copy{font-family:var(--font);font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);background:transparent;border:1px solid var(--border-2);border-radius:4px;padding:3px 9px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.suggest-copy:hover{color:#ba0170;border-color:#ba0170;}
+
 @media(max-width:700px){
   .month-mgmt{padding:10px 12px;}
   .main{padding:16px 12px;}
@@ -731,6 +741,108 @@ function serAtrasoHorario(arr){
   return arr.map(function(r){return r.join(', ');}).join('\n');
 }
 
+/* ══════════ SUGGESTIONS ══════════ */
+var MONTHS_CACHE={};
+var SUGGEST_CONFIG=[
+  {id:'f-areas',          key:'areas',               newLine:function(n){return n+', ';},           ser:serLines2},
+  {id:'f-procs',          key:'procs',               newLine:function(n){return n+', ';},           ser:serLines2},
+  {id:'f-cirujanos',      key:'cirujanos',           newLine:function(n){return n+', ';},           ser:serLines2},
+  {id:'f-instrumental',   key:'instrumental',        newLine:function(n){return n+', ';},           ser:serLines2},
+  {id:'f-bloqCirujanos',  key:'bloqCirujanos',       newLine:function(n){return n+', , , , , , ';}, ser:serBloq},
+  {id:'f-atrasosCirujanos',key:'atrasosCirujanos',   newLine:function(n){return n+', , , ';},       ser:serAtrasosCirujanos},
+  {id:'f-cancelaCirujanos',key:'cancelaCirujanos',   newLine:function(n){return n+', , , ';},       ser:serCancelaCirujanos},
+  {id:'f-estimCirujanos', key:'estimCirujanos',      newLine:function(n){return n+', , , ';},       ser:serEstimCirujanos},
+  {id:'f-motivosCancela', key:'motivosCancela',      newLine:function(n){return n+', ';},           ser:serLines2},
+  {id:'f-detallesCancela',key:'detallesCancela',     newLine:function(n){return n+', ';},           ser:serLines2},
+  {id:'f-anticipCancela', key:'anticipCancela',      newLine:function(n){return n+', ';},           ser:serLines2},
+  {id:'f-areasCancela',   key:'areasCancela',        newLine:function(n){return n+', ';},           ser:serLines2},
+  {id:'f-financiadoresCancela',key:'financiadoresCancela',newLine:function(n){return n+', ';},      ser:serLines2},
+  {id:'f-atrasoMagnitud', key:'atrasoMagnitud',      newLine:function(n){return n+', ';},           ser:serLines2},
+];
+
+function addSuggestLine(fieldId,name){
+  var ta=document.getElementById(fieldId);
+  if(!ta)return;
+  var cfg=null;
+  for(var i=0;i<SUGGEST_CONFIG.length;i++){if(SUGGEST_CONFIG[i].id===fieldId){cfg=SUGGEST_CONFIG[i];break;}}
+  if(!cfg)return;
+  var current=ta.value.trim();
+  var lines=current?current.split('\n'):[];
+  var already=lines.some(function(l){return l.split(',')[0].trim().toLowerCase()===name.toLowerCase();});
+  if(already){ta.focus();showToast(name+' ya está en la lista','#5b4fcf');return;}
+  var newLine=cfg.newLine(name);
+  ta.value=current?current+'\n'+newLine:newLine;
+  ta.focus();
+  ta.setSelectionRange(ta.value.length,ta.value.length);
+}
+
+function copyPrevField(fieldId){
+  var cfg=null;
+  for(var i=0;i<SUGGEST_CONFIG.length;i++){if(SUGGEST_CONFIG[i].id===fieldId){cfg=SUGGEST_CONFIG[i];break;}}
+  if(!cfg)return;
+  var monthKeys=Object.keys(MONTHS_CACHE);
+  var prevKey=null,prevData=null;
+  for(var i=0;i<monthKeys.length;i++){
+    var k=monthKeys[i];
+    if(k===currentKey)continue;
+    var rows=(MONTHS_CACHE[k]||{})[cfg.key];
+    if(rows&&rows.length){prevKey=k;prevData=rows;}
+  }
+  if(!prevData){showToast('No hay datos previos para este campo','#ca8a04');return;}
+  var ta=document.getElementById(fieldId);
+  if(!ta)return;
+  ta.value=cfg.ser(prevData);
+  ta.focus();
+  var lbl=(MONTHS_CACHE[prevKey]||{}).label||prevKey;
+  showToast('Copiado de '+lbl,'#5b4fcf');
+}
+
+function buildAllSuggestions(){
+  SUGGEST_CONFIG.forEach(function(cfg){
+    var namesMap={};
+    Object.keys(MONTHS_CACHE).forEach(function(k){
+      var rows=(MONTHS_CACHE[k]||{})[cfg.key]||[];
+      rows.forEach(function(row){
+        var name=Array.isArray(row)?row[0]:'';
+        if(name)namesMap[name]=1;
+      });
+    });
+    var names=Object.keys(namesMap);
+    if(!names.length)return;
+    var ta=document.getElementById(cfg.id);
+    if(!ta)return;
+    var panelId='sp-'+cfg.id;
+    var existing=document.getElementById(panelId);
+    if(existing)existing.remove();
+    var panel=document.createElement('div');
+    panel.id=panelId;
+    panel.className='suggest-panel';
+    var chips=names.map(function(name){
+      var safe=name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return '<button type="button" class="suggest-chip" title="'+name.replace(/"/g,'&quot;')+'" onclick="addSuggestLine(\''+cfg.id+'\',\''+safe+'\')">'+name+'</button>';
+    }).join('');
+    panel.innerHTML='<div class="suggest-header"><span class="suggest-label">Conocidos · click para agregar</span>'
+      +'<button type="button" class="suggest-copy" onclick="copyPrevField(\''+cfg.id+'\')">↑ Copiar del mes anterior</button></div>'
+      +'<div class="suggest-chips">'+chips+'</div>';
+    ta.parentNode.insertBefore(panel,ta.nextSibling);
+  });
+}
+
+async function preloadAllMonths(keys){
+  var apiUrl=getApiUrl();
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i];
+    if(MONTHS_CACHE[k])continue;
+    if(apiUrl){
+      try{MONTHS_CACHE[k]=await apiGet('/months/'+encodeURIComponent(k));}catch(e){}
+    } else {
+      var stored=(loadAllData().months||{});
+      if(stored[k])MONTHS_CACHE[k]=stored[k];
+    }
+  }
+  buildAllSuggestions();
+}
+
 /* ══════════ DIAS TABLE ══════════ */
 function buildDiasTable(){
   var tbody=document.getElementById('dias-tbody');
@@ -929,6 +1041,7 @@ async function buildDropdown(){
 
   if(count)count.textContent=keys.length+' '+(keys.length===1?'mes':'meses');
   updateApiStatus();
+  preloadAllMonths(keys);
 }
 
 function useFallbackDropdown(sel){
@@ -951,6 +1064,7 @@ async function loadMonth(key){
   if(apiUrl){
     try{
       var data=await apiGet('/months/'+encodeURIComponent(key));
+      MONTHS_CACHE[key]=data;
       fillForm(data);
       return;
     }catch(err){
@@ -959,7 +1073,9 @@ async function loadMonth(key){
   }
   // fallback localStorage
   var stored=loadAllData().months||{};
-  fillForm(stored[key]||emptyMonth());
+  var d=stored[key]||emptyMonth();
+  if(stored[key])MONTHS_CACHE[key]=d;
+  fillForm(d);
 }
 
 /* ══════════ NEW MONTH ══════════ */
@@ -988,6 +1104,8 @@ async function saveCurrent(){
   if(apiUrl){
     try{
       await apiPut('/months/'+encodeURIComponent(key),d);
+      MONTHS_CACHE[key]=d;
+      buildAllSuggestions();
       await buildDropdown();
       document.getElementById('monthSelect').value=key;
       showToast('✓ Guardado en DB: '+d.label,'#0d7a4e');
@@ -1001,6 +1119,8 @@ async function saveCurrent(){
   allData.months=allData.months||{};
   allData.months[key]=d;
   saveAllData(allData);
+  MONTHS_CACHE[key]=d;
+  buildAllSuggestions();
   buildDropdown();
   document.getElementById('monthSelect').value=key;
   showToast('✓ Guardado localmente: '+d.label,'#5b4fcf');
