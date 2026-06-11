@@ -1985,7 +1985,7 @@ function buildAtrasos(d){
 function buildBloques(d){
   // Build detailed table for cirujanos that have full stats
   const hasDetail = d.bloqCirujanos.some(r=>r[2]);
-  const detailRows = hasDetail ? d.bloqCirujanos.filter(r=>r[2]).map(r=>{
+  const detailRows = hasDetail ? d.bloqCirujanos.filter(r=>r[2]).slice().sort((a,b)=>b[1]-a[1]).map(r=>{
     const det=r[2];
     const pctColor = r[1]>=65?'good-val':r[1]>=31?'warn-val':'bad-val';
     const pctInlineColor = r[1]>=65?'var(--good)':r[1]>=31?'var(--warn)':'var(--bad)';
@@ -2277,7 +2277,7 @@ function buildAtrasos(d){
 function buildBloques(d){
   // Build detailed table for cirujanos that have full stats
   const hasDetail = d.bloqCirujanos.some(r=>r[2]);
-  const detailRows = hasDetail ? d.bloqCirujanos.filter(r=>r[2]).map(r=>{
+  const detailRows = hasDetail ? d.bloqCirujanos.filter(r=>r[2]).slice().sort((a,b)=>b[1]-a[1]).map(r=>{
     const det=r[2];
     const pctColor = r[1]>=65?'good-val':r[1]>=31?'warn-val':'bad-val';
     const pctInlineColor = r[1]>=65?'var(--good)':r[1]>=31?'var(--warn)':'var(--bad)';
@@ -2656,7 +2656,8 @@ function buildCharts(section,d){
     if(ca){destroyChart('chartAtrasoHorario');chartInstances['chartAtrasoHorario']=new Chart(ca,{type:'bar',data:{labels:d.atrasoHorario.map(a=>a[0]),datasets:[{label:'Cx demoradas',data:d.atrasoHorario.map(a=>a[2]),backgroundColor:C.brandA,borderRadius:4,yAxisID:'y'},{label:'Min atraso prom.',data:d.atrasoHorario.map(a=>a[1]),backgroundColor:C.warnA,borderRadius:4,yAxisID:'y1'}]},options:{responsive:true,plugins:{legend:{labels:{font:FM,padding:12}}},scales:{x:{grid:{display:false},ticks:{font:F}},y:{grid:{color:'#f0f0f4'},ticks:{font:F}},y1:{position:'right',grid:{display:false},ticks:{font:F}}}}});}
   }
   if(section==='bloques'){
-    const bL=d.bloqCirujanos.map(a=>a[0]),bV=d.bloqCirujanos.map(a=>a[1]);
+    const bSorted=d.bloqCirujanos.slice().sort((a,b)=>b[1]-a[1]);
+    const bL=bSorted.map(a=>a[0]),bV=bSorted.map(a=>a[1]);
     hBar('chartBloques',bL,bV,bV.map(v=>v>=65?C.goodA:v>=31?C.warnA:C.badA));
   }
   if(section==='agendamiento'){
