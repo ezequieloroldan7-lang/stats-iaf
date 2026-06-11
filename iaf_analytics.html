@@ -637,6 +637,25 @@ async function loadMonthsFromApi(){
   if(!apiUrl)return;
   try{
     var rows=await fetch(apiUrl+'/months').then(function(r){return r.json();});
+    var apiKeys={};
+    for(var i=0;i<rows.length;i++)apiKeys[rows[i].key]=true;
+
+    // Push any hardcoded months not yet in the API
+    var localKeys=Object.keys(MONTHS);
+    for(var i=0;i<localKeys.length;i++){
+      var k=localKeys[i];
+      if(!apiKeys[k]){
+        try{
+          await fetch(apiUrl+'/months/'+encodeURIComponent(k),{
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(MONTHS[k])
+          });
+        }catch(e2){}
+      }
+    }
+
+    // Load months from API that aren't hardcoded
     for(var i=0;i<rows.length;i++){
       var key=rows[i].key;
       if(!MONTHS[key]){
