@@ -2583,16 +2583,14 @@ function buildCharts(section,d){
       destroyChart('chartUtilQuirofanosTrim');
       const qLabels=['Q1','Q2','Q3','Q4','Q5','Q6'];
       const umbralData=[66,66,66,66,66,66];
+      var _trimPalette=[C.purpleA,C.brandA,C.goodA,C.warnA,C.midA,'rgba(8,145,178,.45)','rgba(180,83,9,.45)'];
+      var _trimDatasets=Object.keys(MONTHS).filter(function(k){return MONTHS[k].quirofanos&&MONTHS[k].quirofanos.length;}).map(function(k,i){return{label:MONTHS[k].label,data:MONTHS[k].quirofanos,backgroundColor:_trimPalette[i%_trimPalette.length],borderRadius:4,borderSkipped:false};});
+      _trimDatasets.push({label:'Umbral (66%)',data:umbralData,type:'line',borderColor:'#9ca3af',borderDash:[5,5],pointRadius:0,borderWidth:1.5,fill:false,yAxisID:'y'});
       chartInstances['chartUtilQuirofanosTrim']=new Chart(cq,{
         type:'bar',
         data:{
           labels:qLabels,
-          datasets:[
-            {label:'Ene 2026', data:MONTHS.ene2026.quirofanos, backgroundColor:C.purpleA, borderRadius:4, borderSkipped:false},
-            {label:'Feb 2026', data:MONTHS.feb2026.quirofanos, backgroundColor:C.brandA,  borderRadius:4, borderSkipped:false},
-            {label:'Mar 2026', data:MONTHS.mar2026.quirofanos, backgroundColor:C.goodA,   borderRadius:4, borderSkipped:false},
-            {label:'Umbral (66%)', data:umbralData, type:'line', borderColor:'#9ca3af', borderDash:[5,5], pointRadius:0, borderWidth:1.5, fill:false, yAxisID:'y'}
-          ]
+          datasets:_trimDatasets
         },
         options:{
           responsive:true,
@@ -2607,9 +2605,12 @@ function buildCharts(section,d){
         }
       });
     }
+    var _hsIn=d.hsIn||0;
+    var _hsFuera=Math.max(0,(d.hsUtilizadas||0)-_hsIn);
+    var _hsNoUsa=d.hsDisponiblesNoUsadas||0;
     const c=document.getElementById('chartHorasDistrib');
-    if(c){destroyChart('chartHorasDistrib');chartInstances['chartHorasDistrib']=new Chart(c,{type:'bar',data:{labels:['Programado','Urgencia'],datasets:[{label:'Hs dentro',data:[1166.4,28.3],backgroundColor:C.goodA,borderRadius:4},{label:'Hs fuera',data:[50.4,10.0],backgroundColor:C.brandA,borderRadius:4}]},options:{responsive:true,plugins:{legend:{labels:{font:FM,padding:12}}},scales:{x:{grid:{display:false},ticks:{font:F}},y:{grid:{color:'#f0f0f4'},ticks:{font:F}}}}});}
-    donut('chartDentroFuera',['Dentro (1.195 hs)','Fuera (58 hs)','No utilizadas (3.168 hs)'],[1195,58,3168],[C.good,C.warn,'#e2e5ea']);
+    if(c){destroyChart('chartHorasDistrib');chartInstances['chartHorasDistrib']=new Chart(c,{type:'bar',data:{labels:['Dentro del bloque','Fuera del bloque'],datasets:[{data:[_hsIn,_hsFuera],backgroundColor:[C.goodA,C.brandA],borderRadius:6,borderSkipped:false}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw.toLocaleString('es-AR')+' hs';}}}},scales:{x:{grid:{display:false},ticks:{font:F}},y:{grid:{color:'#f0f0f4'},ticks:{font:F}}}}});}
+    donut('chartDentroFuera',['Dentro ('+_hsIn.toLocaleString('es-AR')+' hs)','Fuera ('+_hsFuera.toLocaleString('es-AR')+' hs)','No utilizadas ('+_hsNoUsa.toLocaleString('es-AR')+' hs)'],[_hsIn,_hsFuera,_hsNoUsa],[C.good,C.warn,'#e2e5ea']);
     // Chart utilización por día
     const cd=document.getElementById('chartUtilDia');
     if(cd&&d.diasSemana){
