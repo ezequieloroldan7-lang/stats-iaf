@@ -212,12 +212,12 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height
   </div>
 
   <div class="card">
-    <div class="card-title">Cirugías & Utilización</div>
+    <div class="card-title" style="justify-content:space-between;display:flex;align-items:center;">Cirugías & Utilización <button type="button" onclick="autoCalcDeltas()" style="font-family:var(--font);font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#ba0170;background:#fdf0f7;border:1px solid rgba(186,1,112,.3);border-radius:4px;padding:3px 10px;cursor:pointer;" title="Calcula los Δ comparando con el mes anterior cargado">⟳ Auto-calcular Δ</button></div>
     <div class="fields-grid">
       <div class="field"><label>Cirugías realizadas</label><input type="number" id="f-cirugias" placeholder="503"></div>
-      <div class="field"><label>Δ vs mes ant. (%)</label><input type="number" id="f-deltaCirc" placeholder="-21.5" step="0.1"></div>
+      <div class="field"><label>Δ vs mes ant. (%)</label><input type="number" id="f-deltaCirc" placeholder="ej: -21.5" step="0.1"></div>
       <div class="field"><label>Utilización %</label><input type="number" id="f-utilizacion" placeholder="29" step="0.1"></div>
-      <div class="field"><label>Δ utilización (%)</label><input type="number" id="f-deltaUtil" placeholder="-6.1" step="0.1"></div>
+      <div class="field"><label>Δ utilización (%)</label><input type="number" id="f-deltaUtil" placeholder="ej: -6.1" step="0.1"></div>
       <div class="field"><label>Hs disponibles no usadas</label><input type="number" id="f-hsDisponiblesNoUsadas" placeholder="2494"></div>
       <div class="field"><label>Hs utilizadas</label><input type="number" id="f-hsUtilizadas" placeholder="1034"></div>
       <div class="field"><label>Hs abiertas</label><input type="number" id="f-hsAbiertas" placeholder="3528"></div>
@@ -228,7 +228,7 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height
     <div class="card-title">Cancelaciones</div>
     <div class="fields-grid">
       <div class="field"><label>Cancelación %</label><input type="number" id="f-cancelacion" placeholder="7" step="0.1"></div>
-      <div class="field"><label>Δ cancelación (%)</label><input type="number" id="f-deltaCancela" placeholder="0" step="0.1"></div>
+      <div class="field"><label>Δ cancelación (%)</label><input type="number" id="f-deltaCancela" placeholder="ej: 13.2" step="0.1"></div>
       <div class="field"><label>Cx canceladas &lt;48hs</label><input type="number" id="f-cxCanceladas" placeholder="40"></div>
       <div class="field"><label>Cx canceladas total</label><input type="number" id="f-cxCanceladasTotal" placeholder="53"></div>
       <div class="field"><label>Cx totales programadas</label><input type="number" id="f-cxTotales" placeholder="551"></div>
@@ -251,7 +251,7 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height
     <div class="card-title">Atrasos</div>
     <div class="fields-grid">
       <div class="field"><label>Atraso promedio (min)</label><input type="number" id="f-atraso" placeholder="50" step="0.1"></div>
-      <div class="field"><label>Δ atraso (%)</label><input type="number" id="f-deltaAtraso" placeholder="0" step="0.1"></div>
+      <div class="field"><label>Δ atraso (%)</label><input type="number" id="f-deltaAtraso" placeholder="ej: -6.0" step="0.1"></div>
       <div class="field"><label>Atraso propio (min)</label><input type="number" id="f-atrasoPropio" placeholder="43" step="0.1"></div>
       <div class="field"><label>Hs de atraso total</label><input type="number" id="f-hsAtraso" placeholder="137" step="0.1"></div>
       <div class="field"><label>Cx demoradas %</label><input type="number" id="f-cxDemoradas" placeholder="61" step="0.1"></div>
@@ -265,7 +265,7 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height
     <div class="card-title">Agendamiento</div>
     <div class="fields-grid">
       <div class="field"><label>Agendamiento %</label><input type="number" id="f-agendamiento" placeholder="91.7" step="0.1"></div>
-      <div class="field"><label>Δ agendamiento (%)</label><input type="number" id="f-deltaAgend" placeholder="0" step="0.1"></div>
+      <div class="field"><label>Δ agendamiento (%)</label><input type="number" id="f-deltaAgend" placeholder="ej: -1.6" step="0.1"></div>
       <div class="field"><label>Agendadas</label><input type="number" id="f-agendadas" placeholder="461"></div>
       <div class="field"><label>Sin agendar</label><input type="number" id="f-sinAgendar" placeholder="42"></div>
     </div>
@@ -780,6 +780,41 @@ function addSuggestLine(fieldId,name){
   ta.value=current?current+'\n'+newLine:newLine;
   ta.focus();
   ta.setSelectionRange(ta.value.length,ta.value.length);
+}
+
+function pct(curr,prev){if(!prev||prev===0)return null;return Math.round((curr-prev)/Math.abs(prev)*1000)/10;}
+
+function autoCalcDeltas(){
+  // Find the most recent OTHER month in cache to compare against
+  var monthKeys=Object.keys(MONTHS_CACHE).filter(function(k){return k!==currentKey;});
+  if(!monthKeys.length){showToast('No hay mes anterior cargado para comparar','#ca8a04');return;}
+  var prevKey=monthKeys[monthKeys.length-1];
+  var prev=MONTHS_CACHE[prevKey];
+  var filled=0;
+
+  function setIfEmpty(id,val){
+    if(val===null||val===undefined)return;
+    var el=document.getElementById(id);
+    if(!el)return;
+    // Always overwrite — user clicked the button intentionally
+    el.value=val;
+    filled++;
+  }
+
+  var curCirc=n(fv('f-cirugias'));
+  var curUtil=n(fv('f-utilizacion'));
+  var curCancela=n(fv('f-cancelacion'));
+  var curAtraso=n(fv('f-atraso'));
+  var curAgend=n(fv('f-agendamiento'));
+
+  setIfEmpty('f-deltaCirc',   pct(curCirc,   prev.cirugias));
+  setIfEmpty('f-deltaUtil',   pct(curUtil,   prev.utilizacion));
+  setIfEmpty('f-deltaCancela',pct(curCancela, prev.cancelacion));
+  setIfEmpty('f-deltaAtraso', pct(curAtraso,  prev.atraso));
+  setIfEmpty('f-deltaAgend',  pct(curAgend,   prev.agendamiento));
+
+  var prevLabel=(prev.label||prevKey);
+  showToast('Δ calculados vs '+prevLabel+' ('+filled+' campos)','#0d7a4e');
 }
 
 function copyPrevField(fieldId){
