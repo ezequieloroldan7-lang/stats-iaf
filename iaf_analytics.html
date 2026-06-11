@@ -632,6 +632,10 @@ const MONTHS={
 })();
 
 /* ── LOAD months from API (si está configurada) ── */
+// Keys hardcoded in this file — captured once before any API call
+var HARDCODED_KEYS={};
+Object.keys(MONTHS).forEach(function(k){HARDCODED_KEYS[k]=true;});
+
 async function loadMonthsFromApi(){
   var apiUrl=(localStorage.getItem('IAF_API_URL')||'').replace(/\/$/,'');
   if(!apiUrl)return;
@@ -640,8 +644,8 @@ async function loadMonthsFromApi(){
     var apiKeys={};
     for(var i=0;i<rows.length;i++)apiKeys[rows[i].key]=true;
 
-    // Push any hardcoded months not yet in the API
-    var localKeys=Object.keys(MONTHS);
+    // Push hardcoded months that are missing from the API (first time only)
+    var localKeys=Object.keys(HARDCODED_KEYS);
     for(var i=0;i<localKeys.length;i++){
       var k=localKeys[i];
       if(!apiKeys[k]){
@@ -655,14 +659,21 @@ async function loadMonthsFromApi(){
       }
     }
 
-    // Load months from API that aren't hardcoded
+    // Always load/refresh months from the API (picks up new or edited months)
+    var changed=false;
     for(var i=0;i<rows.length;i++){
       var key=rows[i].key;
-      if(!MONTHS[key]){
-        var data=await fetch(apiUrl+'/months/'+encodeURIComponent(key)).then(function(r){return r.json();});
-        MONTHS[key]=data;
-      }
+      if(HARDCODED_KEYS[key])continue; // keep hardcoded data as-is
+      var data=await fetch(apiUrl+'/months/'+encodeURIComponent(key)).then(function(r){return r.json();});
+      MONTHS[key]=data;
+      changed=true;
     }
+    // Remove months deleted from the API (non-hardcoded only)
+    Object.keys(MONTHS).forEach(function(k){
+      if(!HARDCODED_KEYS[k]&&!apiKeys[k]){delete MONTHS[k];changed=true;}
+    });
+    if(changed)buildMonthBar();
+    // Always rebuild bar in case new month appeared
     buildMonthBar();
   }catch(e){}
 }
@@ -2777,6 +2788,10 @@ function initAnalytics(){
   renderSection('resumenAnual',Object.keys(MONTHS)[0]||'ene2026');
   loadMonthsFromApi();
 }
+
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'){loadMonthsFromApi();}
+});
 
 </script>
 </body>
