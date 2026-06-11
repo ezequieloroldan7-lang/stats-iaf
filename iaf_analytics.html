@@ -294,6 +294,7 @@ canvas{max-height:260px;}
   <div class="section-tab" onclick="switchSection('cancelaciones',this)">Cancelaciones</div>
   <div class="section-tab" onclick="switchSection('estimaciones',this)">Estimaciones</div>
   <div class="section-tab" onclick="switchSection('calidad',this)">Calidad</div>
+  <div class="section-tab" onclick="switchSection('cirujanos',this)">Cirujanos</div>
 </div>
 
 <div class="trimestre-bar">
@@ -2532,6 +2533,147 @@ function buildComparacion(){
 }
 
 
+/* ── CIRUJANOS ── */
+function nameKey(name){
+  var p=name.trim().split(/\s+/);
+  // Key = first surname + first char of second word (handles "E." vs "Erik", "F.J." vs "Fernando")
+  return (p[0]||'').toLowerCase()+' '+(p[1]?p[1].charAt(0).toLowerCase():'');
+}
+
+function buildSurgeonMap(d){
+  var map={};
+  function merge(rawName){
+    var key=nameKey(rawName);
+    if(!map[key]){map[key]={name:rawName,key:key};}
+    // Prefer the name with more non-abbreviation characters (longer without dots)
+    else if(rawName.replace(/\./g,'').length>map[key].name.replace(/\./g,'').length){map[key].name=rawName;}
+    return map[key];
+  }
+  // Base: all surgeons by volume
+  if(d.cirujanos)d.cirujanos.forEach(function(r){merge(r[0]).cirugias=r[1];});
+  // Block utilization: [name, util%, {asig,plan,util,dentro,fuera}]
+  if(d.bloqCirujanos)d.bloqCirujanos.forEach(function(r){
+    var s=merge(r[0]);s.bloqPct=r[1];
+    if(r[2]){s.bloqAsig=r[2].asig;s.bloqUtil=r[2].util;s.bloqDentro=r[2].dentro;s.bloqFuera=r[2].fuera;}
+  });
+  // Cancellations: [name, ?, cancelled_count, rate%]
+  if(d.cancelaCirujanos)d.cancelaCirujanos.forEach(function(r){
+    var s=merge(r[0]);s.cancelaCount=r[2];s.cancelaPct=parseInt(r[3]);
+  });
+  // Delays: [name, surgeries, pct_string, avg_minutes]
+  if(d.atrasosCirujanos)d.atrasosCirujanos.forEach(function(r){
+    var s=merge(r[0]);s.atrasoCirugias=r[1];s.atrasoPct=r[2];s.atrasoMin=r[3];
+  });
+  // Estimation: [name, dur_real_prom, desvio_prom, desvio_acum]
+  if(d.estimCirujanos)d.estimCirujanos.forEach(function(r){
+    var s=merge(r[0]);s.estimDurReal=r[1];s.estimDesvProm=r[2];s.estimDesvAcum=r[3];
+  });
+  return map;
+}
+
+function buildCirujanos(d){
+  var map=buildSurgeonMap(d);
+  // Only surgeons present in the cirujanos volume array (excludes specialty blocks like "Urología")
+  var surgeons=Object.values(map).filter(function(s){return s.cirugias!=null;});
+  surgeons.sort(function(a,b){return (b.cirugias||0)-(a.cirugias||0);});
+
+  function kColor(kpiKey,v){
+    var t=THRESHOLDS[kpiKey];if(!t)return'#4a5068';
+    return t.higherBetter?(v<t.bad?C.brand:v<t.warn?C.warn:C.good):(v>t.bad?C.brand:v>t.warn?C.warn:C.good);
+  }
+  var dash='<td style="text-align:center;color:#c7ccd8">—</td>';
+
+  var rows=surgeons.map(function(s){
+    var rCx   ='<td style="text-align:center;font-weight:700">'+s.cirugias+'</td>';
+    var rBlq  =s.bloqPct!=null?'<td style="text-align:center;font-weight:700;color:'+kColor('bloques',s.bloqPct)+'">'+s.bloqPct+'%</td>':dash;
+    var rBlqH =s.bloqAsig!=null?'<td style="text-align:center">'+s.bloqAsig+' hs</td>':dash;
+    var rCan  =s.cancelaPct!=null?'<td style="text-align:center;font-weight:700;color:'+kColor('cancelacion',s.cancelaPct)+'">'+s.cancelaPct+'%</td>':dash;
+    var rCanN =s.cancelaCount!=null?'<td style="text-align:center;color:#ba0170;font-weight:600">'+s.cancelaCount+'</td>':dash;
+    var rAtr  =s.atrasoMin!=null?'<td style="text-align:center;font-weight:700;color:'+kColor('atraso',s.atrasoMin)+'">'+s.atrasoMin+' min</td>':dash;
+    var rAtrP =s.atrasoPct!=null?'<td style="text-align:center;color:#ba0170;font-weight:600">'+s.atrasoPct+'</td>':dash;
+    var rDesvP=s.estimDesvProm!=null?'<td style="text-align:center;color:#ca8a04;font-weight:600">'+s.estimDesvProm+' min</td>':dash;
+    var rDesvA=s.estimDesvAcum!=null?'<td style="text-align:center;font-weight:700;color:#ca8a04">'+Number(s.estimDesvAcum).toLocaleString('es-AR')+' min</td>':dash;
+    return'<tr><td class="hl" data-cir="'+s.name.toLowerCase()+'">'+s.name+'</td>'+rCx+rBlq+rBlqH+rCan+rCanN+rAtr+rAtrP+rDesvP+rDesvA+'</tr>';
+  }).join('');
+
+  // Cross-month evolution table — surgeons with data in more than one month
+  var meses=Object.values(MONTHS);
+  var crossMap={};
+  meses.forEach(function(mes,mi){
+    if(!mes.cirujanos)return;
+    mes.cirujanos.forEach(function(r){
+      var key=nameKey(r[0]);
+      if(!crossMap[key]){crossMap[key]={name:r[0],vals:Array(meses.length).fill(null)};}
+      else if(r[0].replace(/\./g,'').length>crossMap[key].name.replace(/\./g,'').length){crossMap[key].name=r[0];}
+      crossMap[key].vals[mi]=r[1];
+    });
+  });
+  var crossRows=Object.values(crossMap).filter(function(c){
+    return c.vals.filter(function(v){return v!=null;}).length>1;
+  }).sort(function(a,b){
+    return b.vals.reduce(function(s,v){return s+(v||0);},0)-a.vals.reduce(function(s,v){return s+(v||0);},0);
+  });
+  var shortL=meses.map(function(m){return m.label.split(' ')[0];});
+  var crossHeads=shortL.map(function(l){return'<th style="text-align:center">'+l+'</th>';}).join('');
+  var crossBody=crossRows.map(function(c){
+    var total=c.vals.reduce(function(s,v){return s+(v||0);},0);
+    var cells=c.vals.map(function(v){
+      return v!=null?'<td style="text-align:center;font-weight:600">'+v+'</td>':'<td style="text-align:center;color:#c7ccd8">—</td>';
+    }).join('');
+    return'<tr><td class="hl">'+c.name+'</td>'+cells+'<td style="text-align:center;font-weight:800">'+total+'</td></tr>';
+  }).join('');
+
+  var crossSection=crossRows.length>1?(
+    '<div style="margin-top:32px;padding-top:24px;border-top:2px solid var(--border)">'+
+    '<div style="font-size:18px;font-weight:800;color:var(--text-1);letter-spacing:-.5px;margin-bottom:4px">Evolución de volumen por cirujano</div>'+
+    '<div style="font-size:12px;font-weight:600;color:var(--text-3);margin-bottom:14px">Cirujanos con actividad en más de un mes · ordenados por total</div>'+
+    '<div style="overflow-x:auto"><table class="data-table">'+
+    '<thead><tr><th>Cirujano</th>'+crossHeads+'<th style="text-align:center">Total</th></tr></thead>'+
+    '<tbody>'+crossBody+'</tbody></table></div></div>'
+  ):'';
+
+  return'<div class="section-title">Cirujanos</div>'+
+  '<div class="section-period">'+d.label+' · '+d.period+'</div>'+
+  '<div style="display:flex;align-items:center;gap:12px;margin:16px 0 10px">'+
+    '<input id="cir-search" type="text" placeholder="Buscar cirujano..." oninput="filterCirujanos()"'+
+    ' style="font-family:var(--font);font-size:11px;font-weight:600;border:1px solid rgba(186,1,112,.3);border-radius:100px;padding:5px 14px;width:200px;outline:none;color:var(--text-1);"'+
+    ' onfocus="this.style.borderColor=\'#ba0170\'" onblur="this.style.borderColor=\'rgba(186,1,112,.3)\'">'+
+    '<span id="cir-count" style="font-size:10px;font-weight:700;color:var(--text-3)">'+surgeons.length+' cirujanos</span>'+
+  '</div>'+
+  '<div style="overflow-x:auto">'+
+  '<table class="data-table" id="cir-table">'+
+    '<thead><tr>'+
+      '<th>Cirujano</th>'+
+      '<th style="text-align:center">Cirugías</th>'+
+      '<th style="text-align:center">Util. bloque</th>'+
+      '<th style="text-align:center">Hs asignadas</th>'+
+      '<th style="text-align:center">% Cancelac.</th>'+
+      '<th style="text-align:center">Canceladas</th>'+
+      '<th style="text-align:center">Atraso prom.</th>'+
+      '<th style="text-align:center">% Demoradas</th>'+
+      '<th style="text-align:center">Desvío prom.</th>'+
+      '<th style="text-align:center">Desvío acum.</th>'+
+    '</tr></thead>'+
+    '<tbody id="cir-body">'+rows+'</tbody>'+
+  '</table></div>'+
+  crossSection;
+}
+
+function filterCirujanos(){
+  var q=(document.getElementById('cir-search').value||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  var rows=document.querySelectorAll('#cir-body tr');
+  var visible=0;
+  rows.forEach(function(tr){
+    var cell=tr.querySelector('[data-cir]');
+    var nm=(cell?cell.getAttribute('data-cir'):'').normalize('NFD').replace(/[̀-ͯ]/g,'');
+    var show=!q||nm.indexOf(q)>=0;
+    tr.style.display=show?'':'none';
+    if(show)visible++;
+  });
+  var cnt=document.getElementById('cir-count');
+  if(cnt)cnt.textContent=visible+' cirujanos';
+}
+
 /* ── RENDER ── */
 function renderSection(section,month){
   const d=MONTHS[month];
@@ -2548,6 +2690,7 @@ function renderSection(section,month){
     case 'bloques':       main.innerHTML=buildBloques(d);break;
     case 'agendamiento':  main.innerHTML=buildAgendamiento(d);break;
     case 'calidad':       main.innerHTML=buildCalidad(d);break;
+    case 'cirujanos':     main.innerHTML=buildCirujanos(d);break;
   }
   requestAnimationFrame(()=>buildCharts(section,d));
 }
