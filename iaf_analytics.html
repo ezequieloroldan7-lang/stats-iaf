@@ -1978,7 +1978,7 @@ function buildAtrasos(d){
   </div>
   <div class="chart-card"><div class="chart-card-title">Profesionales que generan más atrasos</div>
     <table class="data-table"><thead><tr><th>Cirujano</th><th>Nro Cx</th><th>Cx Demoradas</th><th>Atraso Propio [min]</th></tr></thead>
-    <tbody>${d.atrasosCirujanos.map(r=>`<tr><td class="hl">${r[0]}</td><td>${r[1]}</td><td class="warn-val">${r[2]}</td><td class="bad-val">${r[3]}</td></tr>`).join('')}</tbody></table></div>
+    <tbody>${d.atrasosCirujanos.slice().sort((a,b)=>b[3]-a[3]).map(r=>`<tr><td class="hl">${r[0]}</td><td>${r[1]}</td><td class="warn-val">${r[2]}</td><td class="bad-val">${r[3]}</td></tr>`).join('')}</tbody></table></div>
   ${buildAtrasosTrimestral()}`;
 }
 
@@ -2270,7 +2270,7 @@ function buildAtrasos(d){
   </div>
   <div class="chart-card"><div class="chart-card-title">Profesionales que generan más atrasos</div>
     <table class="data-table"><thead><tr><th>Cirujano</th><th>Nro Cx</th><th>Cx Demoradas</th><th>Atraso Propio [min]</th></tr></thead>
-    <tbody>${d.atrasosCirujanos.map(r=>`<tr><td class="hl">${r[0]}</td><td>${r[1]}</td><td class="warn-val">${r[2]}</td><td class="bad-val">${r[3]}</td></tr>`).join('')}</tbody></table></div>
+    <tbody>${d.atrasosCirujanos.slice().sort((a,b)=>b[3]-a[3]).map(r=>`<tr><td class="hl">${r[0]}</td><td>${r[1]}</td><td class="warn-val">${r[2]}</td><td class="bad-val">${r[3]}</td></tr>`).join('')}</tbody></table></div>
   ${buildAtrasosTrimestral()}`;
 }
 
@@ -2653,7 +2653,10 @@ function buildCharts(section,d){
   if(section==='atrasos'){
     donut('chartAtrasoMagnitud',d.atrasoMagnitud.map(a=>a[0]),d.atrasoMagnitud.map(a=>a[1]),[C.good,C.warn,C.brand,C.purple,C.mid]);
     const ca=document.getElementById('chartAtrasoHorario');
-    if(ca){destroyChart('chartAtrasoHorario');chartInstances['chartAtrasoHorario']=new Chart(ca,{type:'bar',data:{labels:d.atrasoHorario.map(a=>a[0]),datasets:[{label:'Cx demoradas',data:d.atrasoHorario.map(a=>a[2]),backgroundColor:C.brandA,borderRadius:4,yAxisID:'y'},{label:'Min atraso prom.',data:d.atrasoHorario.map(a=>a[1]),backgroundColor:C.warnA,borderRadius:4,yAxisID:'y1'}]},options:{responsive:true,plugins:{legend:{labels:{font:FM,padding:12}}},scales:{x:{grid:{display:false},ticks:{font:F}},y:{grid:{color:'#f0f0f4'},ticks:{font:F}},y1:{position:'right',grid:{display:false},ticks:{font:F}}}}});}
+    if(ca){
+      const ahSorted=d.atrasoHorario.slice().sort((a,b)=>b[2]-a[2]);
+      destroyChart('chartAtrasoHorario');chartInstances['chartAtrasoHorario']=new Chart(ca,{type:'bar',data:{labels:ahSorted.map(a=>a[0]),datasets:[{label:'Cx demoradas',data:ahSorted.map(a=>a[2]),backgroundColor:C.brandA,borderRadius:4,yAxisID:'y'},{label:'Min atraso prom.',data:ahSorted.map(a=>a[1]),backgroundColor:C.warnA,borderRadius:4,yAxisID:'y1'}]},options:{responsive:true,plugins:{legend:{labels:{font:FM,padding:12}}},scales:{x:{grid:{display:false},ticks:{font:F}},y:{grid:{color:'#f0f0f4'},ticks:{font:F}},y1:{position:'right',grid:{display:false},ticks:{font:F}}}}});
+    }
   }
   if(section==='bloques'){
     const bSorted=d.bloqCirujanos.slice().sort((a,b)=>b[1]-a[1]);
