@@ -299,7 +299,7 @@ canvas{max-height:260px;}
 
 <div class="trimestre-bar">
   <div class="trimestre-tab" onclick="switchTrimestre('evolucion',this)">📈 Evolución 1er trimestre</div>
-  
+  <div class="trimestre-tab" onclick="switchTrimestre('cirujanos',this)">👥 Cirujanos</div>
 </div>
 
 <main class="main" id="main-content"></main>
@@ -2746,13 +2746,11 @@ function buildCirujanosAnual(){
 }
 
 function switchCirujanos(el){
-  var wasAnual=(currentSection==='resumenAnual');
   currentSection='cirujanos';
   document.querySelectorAll('.section-tab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
   document.querySelectorAll('.trimestre-tab').forEach(function(t){t.classList.remove('active');});
-  var main=document.getElementById('main-content');
-  main.innerHTML=wasAnual?buildCirujanosAnual():buildCirujanos(MONTHS[currentMonth]);
+  document.getElementById('main-content').innerHTML=buildCirujanos(MONTHS[currentMonth]);
 }
 
 function filterCirujanos(){
@@ -2786,7 +2784,7 @@ function renderSection(section,month){
     case 'bloques':       main.innerHTML=buildBloques(d);break;
     case 'agendamiento':  main.innerHTML=buildAgendamiento(d);break;
     case 'calidad':       main.innerHTML=buildCalidad(d);break;
-    case 'cirujanos':     main.innerHTML=buildCirujanos(d);break;
+    case 'cirujanos':     main.innerHTML=buildCirujanosAnual();break;
   }
   requestAnimationFrame(()=>buildCharts(section,d));
 }
@@ -2929,7 +2927,7 @@ function switchToAnual(el){
   document.querySelectorAll('.month-tab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
   document.querySelectorAll('.section-tab,.trimestre-tab').forEach(function(t){t.classList.remove('active');});
-  document.querySelector('.section-bar').style.display='';
+  document.querySelector('.section-bar').style.display='none';
   renderSection('resumenAnual',currentMonth);
 }
 
@@ -3023,7 +3021,7 @@ async function submitPassword(){}
 function initAnalytics(){
   currentSection='resumenAnual';
   buildMonthBar();
-  document.querySelector('.section-bar').style.display='';
+  document.querySelector('.section-bar').style.display='none';
   renderSection('resumenAnual',Object.keys(MONTHS)[0]||'ene2026');
   loadMonthsFromApi();
 }
