@@ -147,9 +147,32 @@ body{background:var(--bg);color:var(--text-1);font-family:var(--font);min-height
     <span id="api-status" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;letter-spacing:.5px;cursor:pointer;" onclick="showApiConfig()" title="Clic para configurar URL de la API">⚙ API no config.</span>
     <span class="badge-count" id="month-count">0 meses</span>
     <button onclick="changePassword()" class="btn btn-export" style="font-size:9px;">🔑 Cambiar clave</button>
+    <button id="btn-users" onclick="toggleUsersPanel()" class="btn btn-export" style="font-size:9px;display:none;">👥 Usuarios</button>
     <a href="iaf_analytics.html" class="btn-dashboard">📊 Ver Dashboard</a>
   </div>
 </header>
+
+<!-- Panel gestión de usuarios (solo visible para eroldan) -->
+<div id="users-panel" style="display:none;background:#1a0d14;border-bottom:2px solid #ba0170;padding:16px 24px;">
+  <div style="font-size:13px;font-weight:800;color:#fff;letter-spacing:-.3px;margin-bottom:12px;">👥 Gestión de accesos</div>
+  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px;">Usuarios con acceso</div>
+      <div id="users-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </div>
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px;">Agregar usuario</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <input id="new-usr" type="text" placeholder="Usuario" autocomplete="off"
+          style="font-family:inherit;font-size:12px;font-weight:600;border:1px solid rgba(186,1,112,.4);border-radius:6px;padding:7px 10px;background:rgba(255,255,255,.07);color:#fff;">
+        <input id="new-pwd" type="password" placeholder="Contraseña (mín. 6 caracteres)"
+          style="font-family:inherit;font-size:12px;font-weight:600;border:1px solid rgba(186,1,112,.4);border-radius:6px;padding:7px 10px;background:rgba(255,255,255,.07);color:#fff;">
+        <div id="users-err" style="font-size:10px;color:#ca8a04;min-height:14px;"></div>
+        <button onclick="addUser()" style="font-family:inherit;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;background:#ba0170;color:#fff;align-self:flex-start;">+ Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="month-mgmt">
   <select class="month-select" id="monthSelect" onchange="loadMonth(this.value)">
@@ -1386,10 +1409,15 @@ async function submitPassword(){
     return;
   }
   btn.textContent='...';btn.disabled=true;
-  var usrHash=await sha256(usrEl.value.trim().toLowerCase());
+  var usrNorm=usrEl.value.trim().toLowerCase();
+  var usrHash=await sha256(usrNorm);
   var pwdHash=await sha256(pwdEl.value);
-  if(usrHash===localStorage.getItem('IAF_USR_HASH')&&pwdHash===localStorage.getItem('IAF_PWD_HASH')){
+  var primary=usrHash===localStorage.getItem('IAF_USR_HASH')&&pwdHash===localStorage.getItem('IAF_PWD_HASH');
+  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
+  var matched=primary||extra.some(function(u){return u.usrHash===usrHash&&u.pwdHash===pwdHash;});
+  if(matched){
     sessionStorage.setItem('IAF_UNLOCKED','1');
+    sessionStorage.setItem('IAF_CURRENT_USR',usrNorm);
     document.getElementById('lock-overlay').remove();
     initApp();
   } else {
@@ -1414,6 +1442,64 @@ function initApp(){
   if(!getApiUrl()){
     setTimeout(function(){if(!getApiUrl())showApiConfig();},800);
   }
+  // Show users button only for eroldan
+  if(sessionStorage.getItem('IAF_CURRENT_USR')==='eroldan'){
+    var btn=document.getElementById('btn-users');
+    if(btn)btn.style.display='';
+  }
+}
+
+/* ══════════ USER MANAGEMENT (eroldan only) ══════════ */
+function toggleUsersPanel(){
+  var panel=document.getElementById('users-panel');
+  if(!panel)return;
+  var visible=panel.style.display!=='none';
+  panel.style.display=visible?'none':'block';
+  if(!visible)renderUsersList();
+}
+
+function renderUsersList(){
+  var list=document.getElementById('users-list');
+  if(!list)return;
+  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
+  if(!extra.length){
+    list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);font-style:italic;">Solo eroldan (usuario principal)</div>';
+    return;
+  }
+  list.innerHTML=extra.map(function(u,i){
+    return'<div style="display:flex;align-items:center;gap:8px;">'+
+      '<span style="font-size:12px;font-weight:700;color:#fff;flex:1;">'+u.label+'</span>'+
+      '<button onclick="removeUser('+i+')" style="font-family:inherit;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;background:rgba(202,138,4,.25);color:#ca8a04;">Eliminar</button>'+
+    '</div>';
+  }).join('');
+}
+
+async function addUser(){
+  var usrEl=document.getElementById('new-usr');
+  var pwdEl=document.getElementById('new-pwd');
+  var errEl=document.getElementById('users-err');
+  errEl.textContent='';
+  var usrNorm=(usrEl.value||'').trim().toLowerCase();
+  if(!usrNorm){errEl.textContent='Ingresá un nombre de usuario.';return;}
+  if(usrNorm==='eroldan'){errEl.textContent='eroldan es el usuario principal.';return;}
+  if((pwdEl.value||'').length<6){errEl.textContent='La contraseña debe tener al menos 6 caracteres.';return;}
+  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
+  var usrHash=await sha256(usrNorm);
+  if(extra.some(function(u){return u.usrHash===usrHash;})){errEl.textContent='Ese usuario ya existe.';return;}
+  var pwdHash=await sha256(pwdEl.value);
+  extra.push({usrHash:usrHash,pwdHash:pwdHash,label:usrNorm});
+  localStorage.setItem('IAF_USERS',JSON.stringify(extra));
+  usrEl.value='';pwdEl.value='';
+  renderUsersList();
+  showToast('Usuario '+usrNorm+' agregado','#0d7a4e');
+}
+
+function removeUser(idx){
+  var extra=JSON.parse(localStorage.getItem('IAF_USERS')||'[]');
+  var removed=extra.splice(idx,1);
+  localStorage.setItem('IAF_USERS',JSON.stringify(extra));
+  renderUsersList();
+  if(removed.length)showToast('Usuario '+removed[0].label+' eliminado','#ca8a04');
 }
 
 window.addEventListener('load',function(){
