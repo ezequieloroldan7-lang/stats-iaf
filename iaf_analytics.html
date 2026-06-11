@@ -1656,8 +1656,9 @@ function buildCancelacionesTrimestral(){
   meses.forEach(function(mes,mi){
     if(!mes.cancelaCirujanos) return;
     mes.cancelaCirujanos.forEach(function(r){
-      var key=r[0];
-      if(!cirMap[key]) cirMap[key]={nombre:key,vals:Array(n).fill(null)};
+      var key=nameKey(r[0]);
+      if(!cirMap[key]) cirMap[key]={nombre:r[0],vals:Array(n).fill(null)};
+      else if(r[0].replace(/\./g,'').length>cirMap[key].nombre.replace(/\./g,'').length) cirMap[key].nombre=r[0];
       cirMap[key].vals[mi]=r[2];
     });
   });
@@ -1833,8 +1834,9 @@ function buildEstimacionesTrimestral(){
   meses.forEach(function(mes,mi){
     if(!mes.estimCirujanos) return;
     mes.estimCirujanos.forEach(function(r){
-      var key=r[0];
-      if(!cirMap[key]) cirMap[key]={nombre:key,acum:Array(n).fill(null)};
+      var key=nameKey(r[0]);
+      if(!cirMap[key]) cirMap[key]={nombre:r[0],acum:Array(n).fill(null)};
+      else if(r[0].replace(/\./g,'').length>cirMap[key].nombre.replace(/\./g,'').length) cirMap[key].nombre=r[0];
       cirMap[key].acum[mi]=r[3];
     });
   });
@@ -1908,8 +1910,9 @@ function buildAtrasosTrimestral(){
   var cirMap={};
   meses.forEach(function(mes,mi){
     mes.atrasosCirujanos.forEach(function(r){
-      var key=r[0];
-      if(!cirMap[key]) cirMap[key]={nombre:key,datos:Array(n).fill(null)};
+      var key=nameKey(r[0]);
+      if(!cirMap[key]) cirMap[key]={nombre:r[0],datos:Array(n).fill(null)};
+      else if(r[0].replace(/\./g,'').length>cirMap[key].nombre.replace(/\./g,'').length) cirMap[key].nombre=r[0];
       cirMap[key].datos[mi]={cx:r[1],dem:r[2],propio:r[3]};
     });
   });
@@ -2200,8 +2203,9 @@ function buildAtrasosTrimestral(){
   var cirMap={};
   meses.forEach(function(mes,mi){
     mes.atrasosCirujanos.forEach(function(r){
-      var key=r[0];
-      if(!cirMap[key]) cirMap[key]={nombre:key,datos:Array(n).fill(null)};
+      var key=nameKey(r[0]);
+      if(!cirMap[key]) cirMap[key]={nombre:r[0],datos:Array(n).fill(null)};
+      else if(r[0].replace(/\./g,'').length>cirMap[key].nombre.replace(/\./g,'').length) cirMap[key].nombre=r[0];
       cirMap[key].datos[mi]={cx:r[1],dem:r[2],propio:r[3]};
     });
   });
