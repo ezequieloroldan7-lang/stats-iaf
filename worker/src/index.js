@@ -56,9 +56,12 @@ export default {
           return Response.json(results, { headers: CORS });
         }
 
-        // POST /users — add or update user (admin only)
+        // POST /users — add or update user (admin only, or bootstrap when no users exist)
         if (request.method === 'POST') {
-          if (!await verifyAdmin(request, env)) {
+          const { results: existing } = await env.DB
+            .prepare('SELECT 1 FROM users LIMIT 1').all();
+          const isBootstrap = existing.length === 0;
+          if (!isBootstrap && !await verifyAdmin(request, env)) {
             return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS });
           }
           const body = await request.json();
