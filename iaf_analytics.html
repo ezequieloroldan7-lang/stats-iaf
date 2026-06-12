@@ -664,7 +664,6 @@ async function loadMonthsFromApi(){
     var changed=false;
     for(var i=0;i<rows.length;i++){
       var key=rows[i].key;
-      if(HARDCODED_KEYS[key])continue; // keep hardcoded data as-is
       var data=await fetch(apiUrl+'/months/'+encodeURIComponent(key)).then(function(r){return r.json();});
       MONTHS[key]=data;
       changed=true;
